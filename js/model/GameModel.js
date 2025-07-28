@@ -37,10 +37,28 @@ export class GameModel {
         }
         this.collisionEngine.subscribe(this.player, (entity) => {
             if (entity instanceof Coin) {
+                //remove the coin from the game
+                this.coins = this.coins.filter(c => c !== entity);
+                this.collisionEngine.unregister(entity);
                 this.score += 10; // Increment score on collision with coin
             }
             if (entity instanceof Enemy) {
                 this.score -= 10; // Decrement score on collision with enemy
+                // Calculate bounce direction and apply velocity-based bounce
+                const playerPosition = this.player.getPosition();
+                const enemyPosition = entity.getPosition();
+                const dx = playerPosition.x - enemyPosition.x;
+                const dy = playerPosition.y - enemyPosition.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    const bounceFactor = 300; // Bounce velocity strength
+                    const bounceVector = {
+                        x: (dx / distance) * bounceFactor,
+                        y: (dy / distance) * bounceFactor
+                    };
+                    this.player.applyBounce(bounceVector);
+                }
             }
         });
 
@@ -52,18 +70,23 @@ export class GameModel {
      */
     update(deltaTime) {
         if (!this.isGameRunning) return;
+        
+        // Update player physics
+        this.player.update(this.canvasWidth, this.canvasHeight, deltaTime);
+        
+        // Check collisions
         this.collisionEngine.checkCollisions();
     }
 
     /**
-     * Handle player movement
+     * Apply input to player
      * @param {string} direction - Direction to move
      * @param {number} deltaTime - Time elapsed since last frame in seconds
      */
-    movePlayer(direction, deltaTime) {
+    applyPlayerInput(direction, deltaTime) {
         if (!this.isGameRunning) return;
         
-        this.player.move(direction, this.canvasWidth, this.canvasHeight, deltaTime);
+        this.player.applyInput(direction, deltaTime);
     }
 
     /**

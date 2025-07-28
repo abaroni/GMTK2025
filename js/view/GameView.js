@@ -103,6 +103,24 @@ export class GameView {
         textSize(16);
         text(`Score: ${this.gameModel.getScore()}`, 10, 25);
 
+        // Draw player debug information
+        const player = this.gameModel.getPlayer();
+        const position = player.getPosition();
+        const velocity = player.getVelocity();
+        const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+        
+        fill(0, 0, 255); // Blue color for debug info
+        textAlign(LEFT);
+        textSize(12);
+        let debugY = 50;
+        text(`Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, 10, debugY);
+        debugY += 15;
+        text(`Velocity: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)})`, 10, debugY);
+        debugY += 15;
+        text(`Speed: ${speed.toFixed(1)} / ${player.maxSpeed}`, 10, debugY);
+        debugY += 15;
+        text(`Size: ${player.getSize()}`, 10, debugY);
+
         // Draw game status
         if (!this.gameModel.isRunning()) {
             fill(255, 0, 0);

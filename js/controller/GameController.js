@@ -13,6 +13,15 @@ export class GameController {
      * @param {number} deltaTime - Time elapsed since last frame in seconds
      */
     update(deltaTime) {
+        this.handleContinuousInput(deltaTime);
+    }
+
+    /**
+     * Handle continuous input (for smooth movement and diagonal movement)
+     * @param {number} deltaTime - Time elapsed since last frame in seconds
+     */
+    handleContinuousInput(deltaTime) {
+        // Check for multiple simultaneous key presses for diagonal movement
         const directions = [];
         
         // Check vertical movement
@@ -31,9 +40,9 @@ export class GameController {
             directions.push('right');
         }
         
-        // Move in all pressed directions (enables diagonal movement)
+        // Apply input to player for all pressed directions
         directions.forEach(direction => {
-            this.gameModel.movePlayer(direction, deltaTime);
+            this.gameModel.applyPlayerInput(direction, deltaTime);
         });
     }
 

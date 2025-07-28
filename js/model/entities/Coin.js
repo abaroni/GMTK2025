@@ -7,4 +7,14 @@ export class Coin {
       this.bounds = new Bounds();
   }
   
+
+    getPosition() {
+        return { x: this.x, y: this.y };
+    }
+
+
+    getSize() {
+        return this.size;
+    }
+
 }
