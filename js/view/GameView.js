@@ -1,0 +1,138 @@
+/**
+ * Game View - Handles all rendering and visual presentation
+ */
+export class GameView {
+    constructor(gameModel) {
+        this.gameModel = gameModel;
+        this.canvas = null;
+    }
+
+    /**
+     * Initialize the view with p5.js
+     */
+    init() {
+        const canvasDimensions = this.gameModel.getCanvasDimensions();
+        // Create canvas and attach to game-container
+        this.canvas = createCanvas(canvasDimensions.width, canvasDimensions.height);
+        this.canvas.parent('game-container');
+        
+        console.log('GameView initialized');
+    }
+
+    /**
+     * Render the entire game frame
+     */
+    render() {
+        this.drawBackground();
+        this.drawPlayer();
+        this.drawCoins();
+        this.drawEnemies();
+        this.drawUI();
+    }
+
+    /**
+     * Draw the background
+     */
+    drawBackground() {
+        // Set white background
+        background(255, 255, 255);
+        
+        // Optional: Add a border
+        stroke(200);
+        strokeWeight(2);
+        noFill();
+        rect(0, 0, width - 1, height - 1);
+    }
+
+    /**
+     * Draw the player 
+     */
+    drawPlayer() {
+        const player = this.gameModel.getPlayer();
+        const position = player.getPosition();
+        const size = player.getSize();
+        const color = player.getColor();
+
+        fill(color.r, color.g, color.b);
+        stroke(0);
+        strokeWeight(1);
+        rect(position.x, position.y, size, size);
+    }
+    drawCoins() {
+        const coins = this.gameModel.getCoins();
+        for (const coin of coins) {
+            const position = { x: coin.x, y: coin.y };
+            const size = coin.size;
+
+            // Draw the coin as a circle
+            fill(255, 215, 0); // Gold color
+            stroke(0);
+            strokeWeight(1);
+            ellipse(position.x + size / 2, position.y + size / 2, size, size);
+        }
+    }
+    drawEnemies() {
+        const enemies = this.gameModel.getEnemies();
+        for (const enemy of enemies) {
+            const position = { x: enemy.x, y: enemy.y };
+            const size = enemy.size;
+
+            // Draw the enemy as a star
+            fill(255, 0, 0); // Red color
+            stroke(0);
+            strokeWeight(1);
+            beginShape();
+            for (let i = 0; i < 10; i++) {
+                const angle = TWO_PI / 10 * i - HALF_PI; // 10 points for star (5 outer + 5 inner)
+                const radius = (i % 2 === 0) ? size / 2 : size / 4; // Alternate between outer and inner radius
+                const x = position.x + size / 2 + cos(angle) * radius;
+                const y = position.y + size / 2 + sin(angle) * radius;
+                vertex(x, y);
+            }
+            endShape(CLOSE);
+        }
+    }
+    /**
+     * Draw UI elements (score, instructions, etc.)
+     */
+    drawUI() {
+        // Draw score
+        fill(0);
+        noStroke();
+        textAlign(LEFT);
+        textSize(16);
+        text(`Score: ${this.gameModel.getScore()}`, 10, 25);
+
+        // Draw game status
+        if (!this.gameModel.isRunning()) {
+            fill(255, 0, 0);
+            textAlign(CENTER);
+            textSize(32);
+            text('PAUSED', width / 2, height / 2);
+        }
+
+        // Draw controls info
+        fill(100);
+        textAlign(RIGHT);
+        textSize(12);
+        text('Use arrow keys or WASD to move', width - 10, height - 10);
+    }
+
+    /**
+     * Handle window resize
+     */
+    onResize() {
+        // Keep canvas size consistent
+        const canvasDimensions = this.gameModel.getCanvasDimensions();
+        resizeCanvas(canvasDimensions.width, canvasDimensions.height);
+    }
+
+    /**
+     * Clean up view resources
+     */
+    destroy() {
+        if (this.canvas) {
+            this.canvas.remove();
+        }
+    }
+}
