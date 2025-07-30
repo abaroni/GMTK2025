@@ -11,6 +11,11 @@ export class Player {
         this.color = { r: 0, g: 255, b: 0 }; // Green color
         this.bounds = new Bounds(this.size -12, this.size, 12, 12); // Initialize bounds with player size
         this.activeDirections = new Set(); // Store currently pressed directions
+        
+        // Animation properties
+        this.animationFrame = 0; // Current animation frame (0-3)
+        this.animationTimer = 0; // Timer for animation
+        this.animationSpeed = 0.15; // Seconds per frame (configurable)
     }
 
     /**
@@ -108,6 +113,9 @@ export class Player {
         // Clear active directions for next frame
         this.activeDirections.clear();
         
+        // Update animation
+        this.updateAnimation(deltaTime);
+        
         // Calculate intended position
         const intendedX = this.x + this.velocity.x * deltaTime;
         const intendedY = this.y + this.velocity.y * deltaTime;
@@ -132,6 +140,36 @@ export class Player {
         if (finalCollisionBox.y <= 0 || finalCollisionBox.y + finalCollisionBox.height >= canvasHeight) {
             this.velocity.y = 0;
         }
+    }
+
+    /**
+     * Update animation frame based on timer
+     * @param {number} deltaTime - Time elapsed since last frame in seconds
+     */
+    updateAnimation(deltaTime) {
+        this.animationTimer += deltaTime;
+        
+        // Check if it's time to advance to next frame
+        if (this.animationTimer >= this.animationSpeed) {
+            this.animationFrame = (this.animationFrame + 1) % 4; // Cycle through frames 0-3
+            this.animationTimer = 0; // Reset timer
+        }
+    }
+
+    /**
+     * Set animation speed
+     * @param {number} speed - Seconds per frame
+     */
+    setAnimationSpeed(speed) {
+        this.animationSpeed = speed;
+    }
+
+    /**
+     * Get current animation frame
+     * @returns {number} Current frame (0-3)
+     */
+    getAnimationFrame() {
+        return this.animationFrame;
     }
 
     /**

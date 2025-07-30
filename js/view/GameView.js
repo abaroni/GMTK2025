@@ -57,12 +57,17 @@ export class GameView {
         const size = player.getSize();
         const color = player.getColor();
 
-        //dwfill(color.r, color.g, color.b);
-        //stroke(0);
-        //strokeWeight(1);
-        //rect(position.x, position.y, size, size);
         noSmooth(); // Disable anti-aliasing for pixel art look
-        image(this.spriteSheet,position.x,position.y,64,64,16,16,16,16)
+        
+        // Get current animation frame
+        const frame = player.getAnimationFrame();
+        
+        // Calculate sprite sheet coordinates for each frame
+        const frameXPositions = [16, 32, 48, 64]; // X coordinates for frames 0-3
+        const spriteX = frameXPositions[frame];
+        
+        // Draw the animated sprite
+        image(this.spriteSheet, position.x, position.y, 64, 64, spriteX, 16, 16, 16);
     }
     drawCoins() {
         const coins = this.gameModel.getCoins();
