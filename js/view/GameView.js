@@ -17,7 +17,7 @@ export class GameView {
         this.canvas = createCanvas(canvasDimensions.width, canvasDimensions.height);
         this.canvas.parent('game-container');
         
-        this.spriteSheet = loadImage('assets/ssheet.png');
+        this.spriteSheet = loadImage('assets/ssheetT.png');
 
         console.log('GameView initialized');
     }
@@ -113,28 +113,54 @@ export class GameView {
         strokeWeight(1);
         noFill();
 
-        // Draw player bounds
+        // Draw player bounds and position
         const player = this.gameModel.getPlayer();
         if (player.bounds) {
             const playerBox = player.bounds.getCollisionBox(player);
             rect(playerBox.x, playerBox.y, playerBox.width, playerBox.height);
+            
+            // Draw black border around entity
+            stroke(0, 0, 0); // Black
+            strokeWeight(1);
+            noFill();
+            rect(player.x, player.y, player.getSize(), player.getSize());
         }
 
-        // Draw coin bounds
+        // Draw coin bounds and positions
         const coins = this.gameModel.getCoins();
         for (const coin of coins) {
             if (coin.bounds) {
+                // Draw bounds
+                stroke(180, 180, 180);
+                strokeWeight(1);
+                noFill();
                 const coinBox = coin.bounds.getCollisionBox(coin);
                 rect(coinBox.x, coinBox.y, coinBox.width, coinBox.height);
+                
+                // Draw black border around entity
+                stroke(0, 0, 0); // Black
+                strokeWeight(1);
+                noFill();
+                rect(coin.x, coin.y, coin.size, coin.size);
             }
         }
 
-        // Draw enemy bounds
+        // Draw enemy bounds and positions
         const enemies = this.gameModel.getEnemies();
         for (const enemy of enemies) {
             if (enemy.bounds) {
+                // Draw bounds
+                stroke(180, 180, 180);
+                strokeWeight(1);
+                noFill();
                 const enemyBox = enemy.bounds.getCollisionBox(enemy);
                 rect(enemyBox.x, enemyBox.y, enemyBox.width, enemyBox.height);
+                
+                // Draw black border around entity
+                stroke(0, 0, 0); // Black
+                strokeWeight(1);
+                noFill();
+                rect(enemy.x, enemy.y, enemy.size, enemy.size);
             }
         }
     }

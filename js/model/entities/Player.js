@@ -3,13 +3,13 @@ export class Player {
     constructor() {
         this.x = 350;
         this.y = 350;
-        this.size = 52;
+        this.size = 64;
         this.maxSpeed = 500; // Maximum speed in pixels per second
         this.velocity = { x: 0, y: 0 }; // Current velocity
         this.acceleration = 500; // How quickly player reaches max speed
         this.friction = 0.85; // Velocity decay when no input (per frame)
         this.color = { r: 0, g: 255, b: 0 }; // Green color
-        this.bounds = new Bounds(this.size -12, this.size, 12, 12); // Initialize bounds with player size
+        this.bounds = new Bounds(this.size -24, this.size-12, 12, 12); // Initialize bounds with player size
         this.activeDirections = new Set(); // Store currently pressed directions
         
         // Animation properties
