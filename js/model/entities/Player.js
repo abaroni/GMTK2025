@@ -1,15 +1,15 @@
 import { Bounds } from "./components/Bounds.js";
 export class Player {
     constructor() {
-        this.x = 50;
-        this.y = 50;
-        this.size = 40;
-        this.maxSpeed = 300; // Maximum speed in pixels per second
+        this.x = 350;
+        this.y = 350;
+        this.size = 52;
+        this.maxSpeed = 500; // Maximum speed in pixels per second
         this.velocity = { x: 0, y: 0 }; // Current velocity
-        this.acceleration = 700; // How quickly player reaches max speed
-        this.friction = 0.90; // Velocity decay when no input (per frame)
+        this.acceleration = 500; // How quickly player reaches max speed
+        this.friction = 0.85; // Velocity decay when no input (per frame)
         this.color = { r: 0, g: 255, b: 0 }; // Green color
-        this.bounds = new Bounds();
+        this.bounds = new Bounds(this.size -12, this.size, 12, 12); // Initialize bounds with player size
         this.activeDirections = new Set(); // Store currently pressed directions
     }
 
@@ -112,15 +112,24 @@ export class Player {
         const intendedX = this.x + this.velocity.x * deltaTime;
         const intendedY = this.y + this.velocity.y * deltaTime;
         
-        // Apply boundary checking and update position
-        this.x = Math.max(0, Math.min(canvasWidth - this.size, intendedX));
-        this.y = Math.max(0, Math.min(canvasHeight - this.size, intendedY));
+        // Get collision box for boundary checking
+        const collisionBox = this.bounds.getCollisionBox({ x: intendedX, y: intendedY });
         
-        // Stop velocity if hitting boundaries
-        if (this.x <= 0 || this.x >= canvasWidth - this.size) {
+        // Apply boundary checking using collision box
+        const minX = -this.bounds.offsetX;
+        const maxX = canvasWidth - this.bounds.width - this.bounds.offsetX;
+        const minY = -this.bounds.offsetY;
+        const maxY = canvasHeight - this.bounds.height - this.bounds.offsetY;
+        
+        this.x = Math.max(minX, Math.min(maxX, intendedX));
+        this.y = Math.max(minY, Math.min(maxY, intendedY));
+        
+        // Stop velocity if hitting boundaries using collision box
+        const finalCollisionBox = this.bounds.getCollisionBox(this);
+        if (finalCollisionBox.x <= 0 || finalCollisionBox.x + finalCollisionBox.width >= canvasWidth) {
             this.velocity.x = 0;
         }
-        if (this.y <= 0 || this.y >= canvasHeight - this.size) {
+        if (finalCollisionBox.y <= 0 || finalCollisionBox.y + finalCollisionBox.height >= canvasHeight) {
             this.velocity.y = 0;
         }
     }

@@ -4,7 +4,7 @@ export class Coin {
       this.x = x;
       this.y = y;
       this.size = size;
-      this.bounds = new Bounds();
+      this.bounds = new Bounds(this.size, this.size, 0, 0); // Initialize bounds with coin size
   }
   
 

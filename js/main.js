@@ -14,6 +14,8 @@ let gameController;
 // Delta time tracking
 let lastFrameTime = 0;
 
+
+
 /**
  * p5.js setup function - called once at the beginning
  */

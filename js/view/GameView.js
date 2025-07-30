@@ -5,6 +5,7 @@ export class GameView {
     constructor(gameModel) {
         this.gameModel = gameModel;
         this.canvas = null;
+        this.spriteSheet = null; 
     }
 
     /**
@@ -16,6 +17,8 @@ export class GameView {
         this.canvas = createCanvas(canvasDimensions.width, canvasDimensions.height);
         this.canvas.parent('game-container');
         
+        this.spriteSheet = loadImage('assets/ssheet.png');
+
         console.log('GameView initialized');
     }
 
@@ -27,6 +30,7 @@ export class GameView {
         this.drawPlayer();
         this.drawCoins();
         this.drawEnemies();
+        this.drawDebugBounds();
         this.drawUI();
     }
 
@@ -53,10 +57,12 @@ export class GameView {
         const size = player.getSize();
         const color = player.getColor();
 
-        fill(color.r, color.g, color.b);
-        stroke(0);
-        strokeWeight(1);
-        rect(position.x, position.y, size, size);
+        //dwfill(color.r, color.g, color.b);
+        //stroke(0);
+        //strokeWeight(1);
+        //rect(position.x, position.y, size, size);
+        noSmooth(); // Disable anti-aliasing for pixel art look
+        image(this.spriteSheet,position.x,position.y,64,64,16,16,16,16)
     }
     drawCoins() {
         const coins = this.gameModel.getCoins();
@@ -92,6 +98,42 @@ export class GameView {
             endShape(CLOSE);
         }
     }
+
+    /**
+     * Draw debug bounds for all entities with collision boxes
+     */
+    drawDebugBounds() {
+        // Set light gray color for debug bounds
+        stroke(180, 180, 180); // Light gray
+        strokeWeight(1);
+        noFill();
+
+        // Draw player bounds
+        const player = this.gameModel.getPlayer();
+        if (player.bounds) {
+            const playerBox = player.bounds.getCollisionBox(player);
+            rect(playerBox.x, playerBox.y, playerBox.width, playerBox.height);
+        }
+
+        // Draw coin bounds
+        const coins = this.gameModel.getCoins();
+        for (const coin of coins) {
+            if (coin.bounds) {
+                const coinBox = coin.bounds.getCollisionBox(coin);
+                rect(coinBox.x, coinBox.y, coinBox.width, coinBox.height);
+            }
+        }
+
+        // Draw enemy bounds
+        const enemies = this.gameModel.getEnemies();
+        for (const enemy of enemies) {
+            if (enemy.bounds) {
+                const enemyBox = enemy.bounds.getCollisionBox(enemy);
+                rect(enemyBox.x, enemyBox.y, enemyBox.width, enemyBox.height);
+            }
+        }
+    }
+
     /**
      * Draw UI elements (score, instructions, etc.)
      */

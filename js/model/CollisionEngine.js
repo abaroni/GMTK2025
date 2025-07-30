@@ -40,11 +40,8 @@ export class CollisionEngine {
         }
     }
     isColliding(entityA, entityB) {
-        // Simple AABB collision detection
-        return !(entityA.x + entityA.size < entityB.x ||
-                 entityA.x > entityB.x + entityB.size ||
-                 entityA.y + entityA.size < entityB.y ||
-                 entityA.y > entityB.y + entityB.size);
+        // Use static Bounds collision detection
+        return Bounds.intersects(entityA, entityB);
     }
     handleCollision(entityA, entityB) {
         // Handle collision between two entities
