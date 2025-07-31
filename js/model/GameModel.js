@@ -29,12 +29,21 @@ export class GameModel {
      * Initialize the game
      */
     init() {
-        const LEVEL_STRING = `  #########################################
+        const LEVEL_STRING = `
+
+                                #########################################
                                 #.......................................#
+                                #.......................................#
+                                #.......................................#
+                                #.......................................#
+                                #................C..............C.......#
+                                #.......................................#
+                                #.........................###...........#
+                                #......................................##
                                 #.......................................#
                                 #...................................C...#
-                                #.............C...........C.............#
-                                #...................C...................#
+                                #.............C.....C.....C.............#
+                                #.......................................#
                                 #.........C......................########
                                 #...,........###.................#
                                 #................................#
@@ -76,8 +85,7 @@ export class GameModel {
                         break;
                 }
             }
-        });
-        console.log('Parsed entities:', entities);  
+        }) 
 
         
         // Merge adjacent horizontal platforms
@@ -300,7 +308,7 @@ export class GameModel {
     handlePlaceAction() {
         // Check if cooldown is active
         if (this.placeCooldown > 0) {
-            console.log(`Place action on cooldown. ${(this.placeCooldown / 1000).toFixed(1)}s remaining`);
+            //console.log(`Place action on cooldown. ${(this.placeCooldown / 1000).toFixed(1)}s remaining`);
             return false;
         }
 

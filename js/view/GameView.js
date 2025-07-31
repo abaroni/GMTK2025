@@ -7,6 +7,10 @@ export class GameView {
         this.canvas = null;
         this.spriteSheet = null; 
         this.cameraOffsetX = 0; // Offset for camera to center player
+        this.cameraOffsetY = 0; // Offset for camera to center player vertically
+        this.targetCameraX = 0; // Target camera position for smooth following
+        this.targetCameraY = 0; // Target camera position for smooth following
+        this.cameraDamping = 0.05; // How fast camera follows (0.1 = smooth, 1.0 = instant)
     }
 
     /**
@@ -20,6 +24,13 @@ export class GameView {
         
         this.spriteSheet = loadImage('assets/ssheetT.png');
 
+        // Calculate target camera position (where we want the camera to be)
+        this.targetCameraX = this.gameModel.canvasWidth/2 - this.gameModel.getPlayer().x - 100; //TODO adjust for player facing direction
+        this.targetCameraY = this.gameModel.canvasHeight/2 - this.gameModel.getPlayer().y;
+
+        this.cameraOffsetX = this.targetCameraX;
+        this.cameraOffsetY = this.targetCameraY;
+
         console.log('GameView initialized');
     }
 
@@ -27,9 +38,19 @@ export class GameView {
      * Render the entire game frame
      */
     render() {
-        this.cameraOffsetX = this.gameModel.canvasWidth/2 - this.gameModel.getPlayer().x;
-        translate(this.cameraOffsetX, 0);
+        // Calculate target camera position (where we want the camera to be)
+        this.targetCameraX = this.gameModel.canvasWidth/2 - this.gameModel.getPlayer().x - 100; //TODO adjust for player facing direction
+        this.targetCameraY = this.gameModel.canvasHeight/2 - this.gameModel.getPlayer().y;
+        
+        // Smoothly interpolate current camera position toward target
+        this.cameraOffsetX = lerp(this.cameraOffsetX, this.targetCameraX, this.cameraDamping);
+        this.cameraOffsetY = lerp(this.cameraOffsetY, this.targetCameraY, this.cameraDamping);
+        
+        // Draw background BEFORE camera translation so it can have its own parallax movement
         this.drawBackground();
+        
+        // Apply camera translation for all game objects
+        translate(this.cameraOffsetX, this.cameraOffsetY);
         this.drawPlatforms();
         this.drawFrozenClones();
         this.drawPlayer();
@@ -46,6 +67,45 @@ export class GameView {
         // Set white background
         background(255, 255, 255);
         
+        // Draw parallax layers - furthest to nearest (more visible speeds for testing)
+        this.drawParallaxLayer(0.1, 200, 250, 100, 0, color(220, 220, 220, 255)); // Far mountains - slow but visible
+        this.drawParallaxLayer(0.2, 100, 225, 75, 0, color(250, 230, 220, 255)); // Mid mountains
+        this.drawParallaxLayer(0.3, 150, 200, 50, 0, color(150, 240, 200, 255)); // Near hills - medium speed
+        //this.drawParallaxLayer(0.7, 100, 100, 50, 50, color(100, 150, 255, 255)); // Foreground elements
+    }
+
+    /**
+     * Draw a parallax layer with rectangles
+     * @param {number} parallaxSpeed - Speed multiplier for parallax (0-1, where 1 moves with camera)
+     * @param {number} spacing - Distance between rectangles
+     * @param {number} height - Height of rectangles
+     * @param {number} width - Width of rectangles
+     * @param {number} yOffset - Vertical offset from bottom
+     * @param {color} rectColor - Color of the rectangles
+     */
+    drawParallaxLayer(parallaxSpeed, spacing, height, width, yOffset, rectColor) {
+        // Calculate parallax offset (preserve floating-point precision)
+        const parallaxOffset = this.cameraOffsetX * parallaxSpeed;
+        
+        
+        // Calculate visible range with floating-point precision
+        const screenWidth = this.gameModel.canvasWidth;
+        const leftEdge = -parallaxOffset - screenWidth;
+        const rightEdge = -parallaxOffset + screenWidth * 2;
+        
+        // Calculate first rectangle index (allow floating-point precision)
+        const firstIndex = Math.floor(leftEdge / spacing);
+        const lastIndex = Math.ceil(rightEdge / spacing);
+        
+        fill(rectColor);
+        noStroke();
+        
+        // Draw rectangles with precise floating-point positioning
+        for (let i = firstIndex; i <= lastIndex; i++) {
+            const rectX = i * spacing + parallaxOffset;
+            const rectY = this.gameModel.canvasHeight - height - yOffset;
+            rect(rectX, rectY, width, height);
+        }
     }
 
     drawFrozenClones() {
@@ -246,7 +306,8 @@ export class GameView {
         textAlign(LEFT);
         textSize(16);
         const offsetX = 10 - this.cameraOffsetX;
-        text(`Score: ${this.gameModel.getScore()}`, offsetX, 25);
+        const offsetY = 25 - this.cameraOffsetY;
+        text(`Score: ${this.gameModel.getScore()}`, offsetX, offsetY);
 
         // Draw player debug information
         const player = this.gameModel.getPlayer();
@@ -257,7 +318,7 @@ export class GameView {
         fill(0, 0, 255); // Blue color for debug info
         textAlign(LEFT);
         textSize(12);
-        let debugY = 50;
+        let debugY = 50 - this.cameraOffsetY;
         text(`Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, offsetX, debugY);
         debugY += 15;
         text(`Velocity: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)})`, offsetX, debugY);
@@ -287,7 +348,7 @@ export class GameView {
         fill(100);
         textAlign(RIGHT);
         textSize(12);
-        text('Use arrow keys or WASD to move, space to place a frozen clone', offsetX +width - 20, height - 10);
+        text('Use arrow keys or WASD to move, space to place a frozen clone', offsetX + width - 20, this.gameModel.canvasHeight - 10 - this.cameraOffsetY);
     }
 
     /**
