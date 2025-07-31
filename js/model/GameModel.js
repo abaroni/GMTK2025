@@ -29,19 +29,136 @@ export class GameModel {
      * Initialize the game
      */
     init() {
+        const LEVEL_STRING = `  #########################################
+                                #.......................................#
+                                #.......................................#
+                                #...................................C...#
+                                #.............C...........C.............#
+                                #...................C...................#
+                                #.........C......................########
+                                #...,........###.................#
+                                #................................#
+                                #.......P........................#
+                                ##################################
+                                ................`;
+        //split the level string into lines and filter out tabs and spaces
+        const lines = LEVEL_STRING.trim().split('\n').map(line => line.replace(/\t/g, '').replace(/ /g, ''));
+        const tileSize = 50;
+        const entities = {
+            player: null,
+            platforms: [],
+            coins: [],
+            enemies: []
+        };
+
+
+        lines.forEach((line, y) => {
+            for (let x = 0; x < line.length; x++) {
+                const char = line[x];
+                const worldX = x * tileSize;
+                const worldY = y * tileSize;
+                
+                switch(char) {
+                    case 'P':
+                        entities.player = { x: worldX, y: worldY };
+                        break;
+                    case '#':
+                        entities.platforms.push({ 
+                            x: worldX, y: worldY, 
+                            width: tileSize, height: tileSize 
+                        });
+                        break;
+                    case 'C':
+                        entities.coins.push({ x: worldX, y: worldY });
+                        break;
+                    case 'E':
+                        entities.enemies.push({ x: worldX, y: worldY });
+                        break;
+                }
+            }
+        });
+        console.log('Parsed entities:', entities);  
+
+        
+        // Merge adjacent horizontal platforms
+        const mergedPlatforms = [];
+        // Sort platforms by y, then x
+        const sorted = entities.platforms.slice().sort((a, b) => {
+            if (a.y === b.y) return a.x - b.x;
+            return a.y - b.y;
+        });
+
+        let i = 0;
+        while (i < sorted.length) {
+            let current = sorted[i];
+            let merged = { ...current };
+            let j = i + 1;
+            while (
+            j < sorted.length &&
+            sorted[j].y === current.y &&
+            sorted[j].x === merged.x + merged.width
+            ) {
+            // Extend width
+            merged.width += sorted[j].width;
+            j++;
+            }
+            mergedPlatforms.push(merged);
+            i = j;
+        }
+        entities.platforms = mergedPlatforms;
+
+
+        // Merge adjacent vertical platforms
+        const verticallyMergedPlatforms = [];
+        // Sort platforms by x, then y
+        const vSorted = entities.platforms.slice().sort((a, b) => {
+            if (a.x === b.x) return a.y - b.y;
+            return a.x - b.x;
+        });
+
+        let vi = 0;
+        while (vi < vSorted.length) {
+            let current = vSorted[vi];
+            let merged = { ...current };
+            let vj = vi + 1;
+            while (
+                vj < vSorted.length &&
+                vSorted[vj].x === current.x &&
+                vSorted[vj].width === current.width && // Must have same width
+                vSorted[vj].y === merged.y + merged.height
+            ) {
+                // Extend height
+                merged.height += vSorted[vj].height;
+                vj++;
+            }
+            verticallyMergedPlatforms.push(merged);
+            vi = vj;
+        }
+        entities.platforms = verticallyMergedPlatforms;
+
+
+        entities.platforms.forEach(p => {
+            this.platforms.push(new Platform(p.x, p.y, p.width, p.height));
+        });
+        entities.coins.forEach(c => {
+            this.coins.push(new Coin(c.x, c.y));
+        });
+        entities.enemies.forEach(e => {
+            this.enemies.push(new Enemy(e.x, e.y));
+        });
+        if (entities.player) {
+            this.player.setPosition(entities.player.x, entities.player.y);
+        }
         this.score = 0;
         this.isGameRunning = true;
-        this.coins.push(new Coin(300, 200)); // Example coin
-        this.coins.push(new Coin(500, 400)); // Example coin
+        //this.coins.push(new Coin(300, 200)); // Example coin
+        //this.coins.push(new Coin(500, 400)); // Example coin
 
         //this.enemies.push(new Enemy(200, 100)); // Example enemy
         //this.enemies.push(new Enemy(600, 300)); // Example enemy
 
-        // Create platform instances
-        this.platforms.push(new Platform(0, 550, 800, 20)); // Ground platform
-        //this.platforms.push(new Platform(200, 400, 200, 20)); // Floating platform
-        //awthis.platforms.push(new Platform(500, 250, 150, 20)); // Another platform
-
+        //this.platforms.push(new Platform(0, 550, 800, 20)); // Ground platform
+        
         // Register entities with collision engine
         this.collisionEngine.register(this.player);
         for (const coin of this.coins) {

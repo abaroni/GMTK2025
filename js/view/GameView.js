@@ -46,11 +46,6 @@ export class GameView {
         // Set white background
         background(255, 255, 255);
         
-        // Optional: Add a border
-        stroke(200);
-        strokeWeight(2);
-        noFill();
-        rect(0, 0, width - 1, height - 1);
     }
 
     drawFrozenClones() {
@@ -292,7 +287,7 @@ export class GameView {
         fill(100);
         textAlign(RIGHT);
         textSize(12);
-        text('Use arrow keys or WASD to move', offsetX +width - 20, height - 10);
+        text('Use arrow keys or WASD to move, space to place a frozen clone', offsetX +width - 20, height - 10);
     }
 
     /**
