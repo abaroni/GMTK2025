@@ -1,17 +1,23 @@
+import { Entity } from "./Entity.js";
 import { Bounds } from "./components/Bounds.js";
 import { Physics } from "./components/Physics.js";
-export class Player {
+
+export class Player extends Entity {
     constructor() {
-        this.x = 450;
-        this.y = 450;
-        this.size = 64;
+        const size = 64;
+        // Call parent constructor with initial position and size
+        super(450, 450, size, size);
+        
+        // Player-specific properties
+        this.size = size; // Keep size property for backward compatibility
         this.maxSpeed = 500; // Maximum speed in pixels per second
         this.velocity = { x: 0, y: 0 }; // Current velocity
         this.acceleration = 500; // How quickly player reaches max speed
         this.friction = 0.85; // Velocity decay when no input (per frame)
         this.color = { r: 0, g: 255, b: 0 }; // Green color
         
-        this.bounds = new Bounds(this.size -24, this.size-12, 12, 12); // Initialize bounds with player size
+        // Override the default bounds with custom player bounds
+        this.bounds = new Bounds(this.size - 24, this.size - 12, 12, 12); // Initialize bounds with player size
         this.physics = new Physics(2000, 400); // Initialize physics component
 
         this.activeDirections = new Set(); // Store currently pressed directions
@@ -27,6 +33,9 @@ export class Player {
         this.animationFrame = 0; // Current animation frame (0-3)
         this.animationTimer = 0; // Timer for animation
         this.animationSpeed = 0.15; // Seconds per frame (configurable)
+        
+        // Player is not static (can move)
+        this.isStatic = false;
     }
 
     /**
@@ -200,14 +209,25 @@ export class Player {
         this.y = y;
     }
 
-
     /**
-     * Get player position
-     * @returns {Object} Position object with x, y coordinates
+     * Reset player to a new position with clean physics state (used for level resets)
+     * @param {number} x - New x position
+     * @param {number} y - New y position
      */
-    getPosition() {
-        return { x: this.x, y: this.y };
+    resetToPosition(x, y) {
+        this.x = x;
+        this.y = y;
+        
+        // Reset velocity and physics state when resetting position
+        this.velocity.x = 0;
+        this.velocity.y = 0;
+        this.physics.onGround = false; // Will be set correctly by collision detection
+        this.coyoteTimer = 0; // Reset coyote time
+        this.activeDirections.clear(); // Clear any active input directions
+        
+        console.log(`Player reset to position: (${x}, ${y}), velocity: (${this.velocity.x}, ${this.velocity.y})`);
     }
+
 
     /**
      * Get player velocity
@@ -218,7 +238,7 @@ export class Player {
     }
 
     /**
-     * Get player size
+     * Get player size (override for backward compatibility)
      * @returns {number} Player size
      */
     getSize() {

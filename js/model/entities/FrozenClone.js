@@ -1,24 +1,16 @@
-import { Bounds } from "./components/Bounds.js";
+import { Entity } from "./Entity.js";
 
-export class FrozenClone {
+export class FrozenClone extends Entity {
     constructor(x, y, width, height) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.bounds = new Bounds(width, height, 0, 0); // Initialize bounds with platform size
-        this.isStatic = true; // Mark as static entity
-
+        // Call parent constructor
+        super(x, y, width, height);
         
+        // FrozenClone-specific properties
+        this.isStatic = true; // Mark as static entity (override base class default)
     }
-
-    getPosition() {
-        return { x: this.x, y: this.y };
-    }
-
 
     /**
-     * Platforms don't need to update - they're static
+     * FrozenClones don't need to update - they're static
      */
     update() {
         // Static entities don't update

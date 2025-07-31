@@ -1,20 +1,19 @@
-import { Bounds } from "./components/Bounds.js";
-export class Coin {
-  constructor(x, y, size = 20) {
-      this.x = x;
-      this.y = y;
-      this.size = size;
-      this.bounds = new Bounds(this.size, this.size, 0, 0); // Initialize bounds with coin size
-  }
-  
+import { Entity } from "./Entity.js";
 
-    getPosition() {
-        return { x: this.x, y: this.y };
+export class Coin extends Entity {
+    constructor(x, y, size = 20) {
+        // Call parent constructor with size for both width and height
+        super(x, y, size, size);
+        
+        // Coin-specific properties
+        this.size = size; // Keep size property for backward compatibility
     }
 
-
+    /**
+     * Get coin size (override for backward compatibility)
+     * @returns {number} Coin size
+     */
     getSize() {
         return this.size;
     }
-
 }

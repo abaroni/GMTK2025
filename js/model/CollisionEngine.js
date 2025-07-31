@@ -26,6 +26,12 @@ export class CollisionEngine {
         this.subscriptions = this.subscriptions.filter(sub => sub.entity !== entity);
     }
 
+    clear() {
+        // Clear all entities and subscriptions
+        this.entities = [];
+        this.subscriptions = [];
+    }
+
     checkCollisions() {
         // Check for collisions between registered entities
         for (let i = 0; i < this.entities.length; i++) {

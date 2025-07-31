@@ -1,16 +1,17 @@
 /**
  * Game View - Handles all rendering and visual presentation
  */
+import { Camera } from './Camera.js';
+
 export class GameView {
     constructor(gameModel) {
         this.gameModel = gameModel;
         this.canvas = null;
-        this.spriteSheet = null; 
-        this.cameraOffsetX = 0; // Offset for camera to center player
-        this.cameraOffsetY = 0; // Offset for camera to center player vertically
-        this.targetCameraX = 0; // Target camera position for smooth following
-        this.targetCameraY = 0; // Target camera position for smooth following
-        this.cameraDamping = 0.05; // How fast camera follows (0.1 = smooth, 1.0 = instant)
+        this.spriteSheet = null;
+        
+        // Initialize camera with canvas dimensions
+        const canvasDimensions = this.gameModel.getCanvasDimensions();
+        this.camera = new Camera(canvasDimensions.width, canvasDimensions.height);
     }
 
     /**
@@ -24,12 +25,8 @@ export class GameView {
         
         this.spriteSheet = loadImage('assets/ssheetT.png');
 
-        // Calculate target camera position (where we want the camera to be)
-        this.targetCameraX = this.gameModel.canvasWidth/2 - this.gameModel.getPlayer().x - 100; //TODO adjust for player facing direction
-        this.targetCameraY = this.gameModel.canvasHeight/2 - this.gameModel.getPlayer().y;
-
-        this.cameraOffsetX = this.targetCameraX;
-        this.cameraOffsetY = this.targetCameraY;
+        // Initialize camera to follow the player
+        this.camera.init(this.gameModel.getPlayer());
 
         console.log('GameView initialized');
     }
@@ -38,19 +35,14 @@ export class GameView {
      * Render the entire game frame
      */
     render() {
-        // Calculate target camera position (where we want the camera to be)
-        this.targetCameraX = this.gameModel.canvasWidth/2 - this.gameModel.getPlayer().x - 100; //TODO adjust for player facing direction
-        this.targetCameraY = this.gameModel.canvasHeight/2 - this.gameModel.getPlayer().y;
-        
-        // Smoothly interpolate current camera position toward target
-        this.cameraOffsetX = lerp(this.cameraOffsetX, this.targetCameraX, this.cameraDamping);
-        this.cameraOffsetY = lerp(this.cameraOffsetY, this.targetCameraY, this.cameraDamping);
+        // Update camera to follow the player
+        this.camera.followTarget(this.gameModel.getPlayer());
         
         // Draw background BEFORE camera translation so it can have its own parallax movement
         this.drawBackground();
         
-        // Apply camera translation for all game objects
-        translate(this.cameraOffsetX, this.cameraOffsetY);
+        // Apply camera transformation for all game objects
+        this.camera.applyTransform();
         this.drawPlatforms();
         this.drawFrozenClones();
         this.drawPlayer();
@@ -84,8 +76,11 @@ export class GameView {
      * @param {color} rectColor - Color of the rectangles
      */
     drawParallaxLayer(parallaxSpeed, spacing, height, width, yOffset, rectColor) {
+        // Get camera offset for parallax calculations
+        const cameraOffset = this.camera.getOffset();
+        
         // Calculate parallax offset (preserve floating-point precision)
-        const parallaxOffset = this.cameraOffsetX * parallaxSpeed;
+        const parallaxOffset = cameraOffset.x * parallaxSpeed;
         
         
         // Calculate visible range with floating-point precision
@@ -305,9 +300,12 @@ export class GameView {
         noStroke();
         textAlign(LEFT);
         textSize(16);
-        const offsetX = 10 - this.cameraOffsetX;
-        const offsetY = 25 - this.cameraOffsetY;
-        text(`Score: ${this.gameModel.getScore()}`, offsetX, offsetY);
+        
+        // Get camera offset for UI positioning
+        const cameraOffset = this.camera.getOffset();
+        const offsetX = 10 - cameraOffset.x;
+        const offsetY = 25 - cameraOffset.y;
+        text(`Score: ${this.gameModel.getScore()} / ${this.gameModel.getTotalCoins() * 10}`, offsetX, offsetY);
 
         // Draw player debug information
         const player = this.gameModel.getPlayer();
@@ -318,7 +316,7 @@ export class GameView {
         fill(0, 0, 255); // Blue color for debug info
         textAlign(LEFT);
         textSize(12);
-        let debugY = 50 - this.cameraOffsetY;
+        let debugY = 50 - cameraOffset.y;
         text(`Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, offsetX, debugY);
         debugY += 15;
         text(`Velocity: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)})`, offsetX, debugY);
@@ -348,7 +346,7 @@ export class GameView {
         fill(100);
         textAlign(RIGHT);
         textSize(12);
-        text('Use arrow keys or WASD to move, space to place a frozen clone', offsetX + width - 20, this.gameModel.canvasHeight - 10 - this.cameraOffsetY);
+        text('Use arrow keys or WASD to move, space to place a frozen clone', offsetX + width - 20, this.gameModel.canvasHeight - 10 - cameraOffset.y);
     }
 
     /**
@@ -358,6 +356,18 @@ export class GameView {
         // Keep canvas size consistent
         const canvasDimensions = this.gameModel.getCanvasDimensions();
         resizeCanvas(canvasDimensions.width, canvasDimensions.height);
+        
+        // Update camera with new canvas dimensions
+        this.camera.canvasWidth = canvasDimensions.width;
+        this.camera.canvasHeight = canvasDimensions.height;
+    }
+
+    /**
+     * Get camera instance for external access
+     * @returns {Camera} Camera instance
+     */
+    getCamera() {
+        return this.camera;
     }
 
     /**
