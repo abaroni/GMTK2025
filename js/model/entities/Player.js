@@ -1,15 +1,19 @@
 import { Bounds } from "./components/Bounds.js";
+import { Physics } from "./components/Physics.js";
 export class Player {
     constructor() {
-        this.x = 350;
-        this.y = 350;
+        this.x = 450;
+        this.y = 450;
         this.size = 64;
         this.maxSpeed = 500; // Maximum speed in pixels per second
         this.velocity = { x: 0, y: 0 }; // Current velocity
         this.acceleration = 500; // How quickly player reaches max speed
         this.friction = 0.85; // Velocity decay when no input (per frame)
         this.color = { r: 0, g: 255, b: 0 }; // Green color
+        
         this.bounds = new Bounds(this.size -24, this.size-12, 12, 12); // Initialize bounds with player size
+        this.physics = new Physics(2000, 400); // Initialize physics component
+
         this.activeDirections = new Set(); // Store currently pressed directions
         
         // Animation properties
@@ -59,7 +63,7 @@ export class Player {
      * @param {number} canvasHeight - Canvas height for boundary checking
      * @param {number} deltaTime - Time elapsed since last frame in seconds
      */
-    update(canvasWidth, canvasHeight, deltaTime) {
+    update(deltaTime) {
         // Check if input directions oppose current velocity
         const hasLeft = this.activeDirections.has('left');
         const hasRight = this.activeDirections.has('right');
@@ -108,6 +112,8 @@ export class Player {
         }
         if (!hasValidVerticalInput) {
             this.velocity.y *= this.friction;
+            //apply physics gravity
+            this.velocity.y += this.physics.gravity * deltaTime;
         }
         
         // Clear active directions for next frame
@@ -117,29 +123,8 @@ export class Player {
         this.updateAnimation(deltaTime);
         
         // Calculate intended position
-        const intendedX = this.x + this.velocity.x * deltaTime;
-        const intendedY = this.y + this.velocity.y * deltaTime;
-        
-        // Get collision box for boundary checking
-        const collisionBox = this.bounds.getCollisionBox({ x: intendedX, y: intendedY });
-        
-        // Apply boundary checking using collision box
-        const minX = -this.bounds.offsetX;
-        const maxX = canvasWidth - this.bounds.width - this.bounds.offsetX;
-        const minY = -this.bounds.offsetY;
-        const maxY = canvasHeight - this.bounds.height - this.bounds.offsetY;
-        
-        this.x = Math.max(minX, Math.min(maxX, intendedX));
-        this.y = Math.max(minY, Math.min(maxY, intendedY));
-        
-        // Stop velocity if hitting boundaries using collision box
-        const finalCollisionBox = this.bounds.getCollisionBox(this);
-        if (finalCollisionBox.x <= 0 || finalCollisionBox.x + finalCollisionBox.width >= canvasWidth) {
-            this.velocity.x = 0;
-        }
-        if (finalCollisionBox.y <= 0 || finalCollisionBox.y + finalCollisionBox.height >= canvasHeight) {
-            this.velocity.y = 0;
-        }
+        this.x = this.x + this.velocity.x * deltaTime;
+        this.y = this.y + this.velocity.y * deltaTime;
     }
 
     /**
@@ -179,7 +164,7 @@ export class Player {
     applyBounce(bounceVector) {
         this.velocity.x += bounceVector.x;
         this.velocity.y += bounceVector.y;
-        
+
         // Clamp to max speed after bounce
         const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
         if (speed > this.maxSpeed) {

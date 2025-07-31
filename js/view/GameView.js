@@ -26,7 +26,9 @@ export class GameView {
      * Render the entire game frame
      */
     render() {
+        translate(this.gameModel.canvasWidth/2 - this.gameModel.getPlayer().x, 0);
         this.drawBackground();
+        this.drawPlatforms();
         this.drawPlayer();
         this.drawCoins();
         this.drawEnemies();
@@ -49,13 +51,25 @@ export class GameView {
     }
 
     /**
+     * Draw all platforms
+     */
+    drawPlatforms() {
+        const platforms = this.gameModel.getPlatforms();
+        for (const platform of platforms) {
+            // Draw platform as a brown rectangle
+            fill(139, 69, 19); // Brown color for platforms
+            stroke(101, 50, 13); // Darker brown border
+            strokeWeight(2);
+            rect(platform.x, platform.y, platform.width, platform.height);
+        }
+    }
+
+    /**
      * Draw the player 
      */
     drawPlayer() {
         const player = this.gameModel.getPlayer();
         const position = player.getPosition();
-        const size = player.getSize();
-        const color = player.getColor();
 
         noSmooth(); // Disable anti-aliasing for pixel art look
         
@@ -65,9 +79,10 @@ export class GameView {
         // Calculate sprite sheet coordinates for each frame
         const frameXPositions = [16, 32, 48, 64]; // X coordinates for frames 0-3
         const spriteX = frameXPositions[frame];
+        const spriteY = 16; // Y coordinate for the player sprite rowd
         
         // Draw the animated sprite
-        image(this.spriteSheet, position.x, position.y, 64, 64, spriteX, 16, 16, 16);
+        image(this.spriteSheet, position.x, position.y, player.getSize(), player.getSize(), spriteX, spriteY, 16, 16);
     }
     drawCoins() {
         const coins = this.gameModel.getCoins();
@@ -161,6 +176,25 @@ export class GameView {
                 strokeWeight(1);
                 noFill();
                 rect(enemy.x, enemy.y, enemy.size, enemy.size);
+            }
+        }
+
+        // Draw platform bounds and positions
+        const platforms = this.gameModel.getPlatforms();
+        for (const platform of platforms) {
+            if (platform.bounds) {
+                // Draw bounds
+                stroke(180, 180, 180);
+                strokeWeight(1);
+                noFill();
+                const platformBox = platform.bounds.getCollisionBox(platform);
+                rect(platformBox.x, platformBox.y, platformBox.width, platformBox.height);
+                
+                // Draw black border around entity
+                stroke(0, 0, 0); // Black
+                strokeWeight(1);
+                noFill();
+                rect(platform.x, platform.y, platform.width, platform.height);
             }
         }
     }

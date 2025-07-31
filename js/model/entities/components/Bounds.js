@@ -20,25 +20,7 @@ export class Bounds {
         };
     }
 
-    /**
-     * Set bounds dimensions
-     * @param {number} width - Width of collision box
-     * @param {number} height - Height of collision box
-     */
-    setSize(width, height) {
-        this.width = width;
-        this.height = height;
-    }
 
-    /**
-     * Set bounds offset from entity position
-     * @param {number} offsetX - X offset
-     * @param {number} offsetY - Y offset
-     */
-    setOffset(offsetX, offsetY) {
-        this.offsetX = offsetX;
-        this.offsetY = offsetY;
-    }
 
     /**
      * Check if two entities' bounds intersect (static method)
