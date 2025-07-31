@@ -6,6 +6,7 @@ export class GameView {
         this.gameModel = gameModel;
         this.canvas = null;
         this.spriteSheet = null; 
+        this.cameraOffsetX = 0; // Offset for camera to center player
     }
 
     /**
@@ -26,9 +27,11 @@ export class GameView {
      * Render the entire game frame
      */
     render() {
-        translate(this.gameModel.canvasWidth/2 - this.gameModel.getPlayer().x, 0);
+        this.cameraOffsetX = this.gameModel.canvasWidth/2 - this.gameModel.getPlayer().x;
+        translate(this.cameraOffsetX, 0);
         this.drawBackground();
         this.drawPlatforms();
+        this.drawFrozenClones();
         this.drawPlayer();
         this.drawCoins();
         this.drawEnemies();
@@ -50,6 +53,26 @@ export class GameView {
         rect(0, 0, width - 1, height - 1);
     }
 
+    drawFrozenClones() {
+        const frozenClones = this.gameModel.frozenClones;
+        for (const clone of frozenClones) {
+            // Draw frozen clone as a player frame with a blue tint
+            const position = clone.getPosition();
+           
+            // Calculate sprite sheet coordinates for each frame
+            const frameXPositions = [16, 32, 48, 64]; // X coordinates for frames 0-3
+            const spriteX = frameXPositions[0];
+            const spriteY = 16; // Y coordinate for the player sprite rowd
+            
+            // Set blue tint for frozen clones
+            tint(100, 100, 255, 200); // Light blue with some transparency
+            // Draw the animated sprite
+            image(this.spriteSheet, position.x - 12, position.y - 12, this.gameModel.player.getSize(), this.gameModel.player.getSize(), spriteX, spriteY, 16, 16);
+            // Reset tint for other drawings
+            noTint();
+        }
+    }
+
     /**
      * Draw all platforms
      */
@@ -57,8 +80,8 @@ export class GameView {
         const platforms = this.gameModel.getPlatforms();
         for (const platform of platforms) {
             // Draw platform as a brown rectangle
-            fill(139, 69, 19); // Brown color for platforms
-            stroke(101, 50, 13); // Darker brown border
+            fill(140, 90, 90); // Brown color for platforms
+            stroke(100, 20, 20); // Darker brown border
             strokeWeight(2);
             rect(platform.x, platform.y, platform.width, platform.height);
         }
@@ -184,7 +207,7 @@ export class GameView {
         for (const platform of platforms) {
             if (platform.bounds) {
                 // Draw bounds
-                stroke(180, 180, 180);
+                stroke(240, 230, 230);
                 strokeWeight(1);
                 noFill();
                 const platformBox = platform.bounds.getCollisionBox(platform);
@@ -195,6 +218,25 @@ export class GameView {
                 strokeWeight(1);
                 noFill();
                 rect(platform.x, platform.y, platform.width, platform.height);
+            }
+        }
+
+        // Draw frozen clone bounds and positions
+        const frozenClones = this.gameModel.frozenClones;
+        for (const clone of frozenClones) {
+            if (clone.bounds) {
+                // Draw bounds
+                stroke(200, 200, 255); // Light blue for frozen clones
+                strokeWeight(1);
+                noFill();
+                const cloneBox = clone.bounds.getCollisionBox(clone);
+                rect(cloneBox.x, cloneBox.y, cloneBox.width, cloneBox.height);
+                
+                // Draw black border around entity
+                stroke(0, 0, 0); // Black
+                strokeWeight(1);
+                noFill();
+                rect(clone.x, clone.y, clone.width, clone.height);
             }
         }
     }
@@ -208,7 +250,8 @@ export class GameView {
         noStroke();
         textAlign(LEFT);
         textSize(16);
-        text(`Score: ${this.gameModel.getScore()}`, 10, 25);
+        const offsetX = 10 - this.cameraOffsetX;
+        text(`Score: ${this.gameModel.getScore()}`, offsetX, 25);
 
         // Draw player debug information
         const player = this.gameModel.getPlayer();
@@ -220,13 +263,22 @@ export class GameView {
         textAlign(LEFT);
         textSize(12);
         let debugY = 50;
-        text(`Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, 10, debugY);
+        text(`Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, offsetX, debugY);
         debugY += 15;
-        text(`Velocity: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)})`, 10, debugY);
+        text(`Velocity: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)})`, offsetX, debugY);
         debugY += 15;
-        text(`Speed: ${speed.toFixed(1)} / ${player.maxSpeed}`, 10, debugY);
+        text(`Speed: ${speed.toFixed(1)} / ${player.maxSpeed}`, offsetX, debugY);
         debugY += 15;
-        text(`Size: ${player.getSize()}`, 10, debugY);
+        text(`Size: ${player.getSize()}`, offsetX, debugY);
+        debugY += 15;
+        
+        // Draw placement cooldown info
+        const placeCooldown = this.gameModel.getPlaceCooldown ? this.gameModel.getPlaceCooldown() : 0;
+        if (placeCooldown > 0) {
+            text(`Place Cooldown: ${(placeCooldown / 1000).toFixed(1)}s`, offsetX, debugY);
+        } else {
+            text(`Place: Ready`, offsetX, debugY);
+        }
 
         // Draw game status
         if (!this.gameModel.isRunning()) {
@@ -240,7 +292,7 @@ export class GameView {
         fill(100);
         textAlign(RIGHT);
         textSize(12);
-        text('Use arrow keys or WASD to move', width - 10, height - 10);
+        text('Use arrow keys or WASD to move', offsetX +width - 20, height - 10);
     }
 
     /**

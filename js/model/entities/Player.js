@@ -16,6 +16,13 @@ export class Player {
 
         this.activeDirections = new Set(); // Store currently pressed directions
         
+        // Jump properties
+        this.jumpVelocity = -900; // Jump strength (negative = upward)
+        
+        // Coyote time properties
+        this.coyoteTime = 0.1; // 100ms grace period after leaving ground
+        this.coyoteTimer = 0; // Current coyote time remaining
+        
         // Animation properties
         this.animationFrame = 0; // Current animation frame (0-3)
         this.animationTimer = 0; // Timer for animation
@@ -35,10 +42,15 @@ export class Player {
         
         switch (direction) {
             case 'up':
-                this.velocity.y -= accelerationAmount;
+                // Jump if on ground OR within coyote time
+                if (this.physics.onGround || this.coyoteTimer > 0) {
+                    this.velocity.y = this.jumpVelocity;
+                    this.physics.onGround = false; // Player is now airborne
+                    this.coyoteTimer = 0; // Use up coyote time
+                }
                 break;
             case 'down':
-                this.velocity.y += accelerationAmount;
+                // Down key has no effect in platformer
                 break;
             case 'left':
                 this.velocity.x -= accelerationAmount;
@@ -48,12 +60,9 @@ export class Player {
                 break;
         }
         
-        // Clamp velocity to max speed
-        const speed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.y * this.velocity.y);
-        if (speed > this.maxSpeed) {
-            console.log("Clamping speed to maxSpeed:", this.maxSpeed);
-            this.velocity.x = (this.velocity.x / speed) * this.maxSpeed;
-            this.velocity.y = (this.velocity.y / speed) * this.maxSpeed;
+        // Clamp horizontal velocity to max speed (don't limit vertical for gravity/jumps)
+        if (Math.abs(this.velocity.x) > this.maxSpeed) {
+            this.velocity.x = Math.sign(this.velocity.x) * this.maxSpeed;
         }
     }
 
@@ -64,11 +73,27 @@ export class Player {
      * @param {number} deltaTime - Time elapsed since last frame in seconds
      */
     update(deltaTime) {
-        // Check if input directions oppose current velocity
+        // Store previous ground state for coyote time
+        const wasOnGround = this.physics.onGround;
+        
+        // Reset ground state at start of frame - collision system will set it back to true if still grounded
+        this.physics.onGround = false;
+        
+        // Update coyote timer
+        if (wasOnGround && !this.physics.onGround) {
+            // Just left ground, start coyote timer
+            this.coyoteTimer = this.coyoteTime;
+        } else if (!wasOnGround && !this.physics.onGround) {
+            // Still in air, decrease coyote timer
+            this.coyoteTimer = Math.max(0, this.coyoteTimer - deltaTime);
+        } else if (this.physics.onGround) {
+            // Back on ground, reset coyote timer
+            this.coyoteTimer = 0;
+        }
+        
+        // Check if input directions oppose current velocity (only for horizontal)
         const hasLeft = this.activeDirections.has('left');
         const hasRight = this.activeDirections.has('right');
-        const hasUp = this.activeDirections.has('up');
-        const hasDown = this.activeDirections.has('down');
         
         // Check if horizontal input opposes current velocity direction
         let hasValidHorizontalInput = false;
@@ -88,33 +113,13 @@ export class Player {
             }
         }
         
-        // Check if vertical input opposes current velocity direction
-        let hasValidVerticalInput = false;
-        if (hasUp || hasDown) {
-            if (hasUp && hasDown) {
-                // Both directions pressed - apply friction
-                hasValidVerticalInput = false;
-            } else if (hasUp && this.velocity.y > 0) {
-                // Moving down but pressing up - apply friction for direction change
-                hasValidVerticalInput = false;
-            } else if (hasDown && this.velocity.y < 0) {
-                // Moving up but pressing down - apply friction for direction change
-                hasValidVerticalInput = false;
-            } else {
-                // Input aligns with velocity or velocity is zero
-                hasValidVerticalInput = true;
-            }
-        }
-        
-        // Apply friction based on input validity
+        // Apply horizontal friction only if no valid horizontal input
         if (!hasValidHorizontalInput) {
             this.velocity.x *= this.friction;
         }
-        if (!hasValidVerticalInput) {
-            this.velocity.y *= this.friction;
-            //apply physics gravity
-            this.velocity.y += this.physics.gravity * deltaTime;
-        }
+        
+        // Always apply gravity
+        this.velocity.y += this.physics.gravity * deltaTime;
         
         // Clear active directions for next frame
         this.activeDirections.clear();

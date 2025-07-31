@@ -3,6 +3,7 @@ export class GameController {
         this.gameModel = gameModel;
         this.gameView = gameView;
         this.keysPressed = {};
+        this.lastPlaceTime = 0; // For manual debouncing of spacebar
     }
 
     init() {
@@ -40,6 +41,13 @@ export class GameController {
             directions.push('right');
         }
         
+        // Check place action with manual debouncing (avoids ghosting)
+        const currentTime = millis();
+        if (keyIsDown(32) && currentTime - this.lastPlaceTime > 100) { // 100ms debounce to prevent spam
+            this.handlePlaceAction();
+            this.lastPlaceTime = currentTime;
+        }
+        
         // Apply input to player for all pressed directions
         directions.forEach(direction => {
             this.gameModel.applyPlayerInput(direction, deltaTime);
@@ -48,13 +56,18 @@ export class GameController {
 
     onKeyPressed(keyCode) {
         switch (keyCode) {
-            case 32: // Spacebar
-                this.gameModel.togglePause();
-                break;
             case 27: // Escape key
                 this.gameModel.togglePause();
                 break;
         }
+    }
+
+    /**
+     * Handle place action with cooldown
+     */
+    handlePlaceAction() {
+        // Delegate to the game model
+        this.gameModel.handlePlaceAction();
     }
     onKeyReleased(keyCode) {
     }

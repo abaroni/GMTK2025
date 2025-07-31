@@ -2,6 +2,7 @@ import { Player } from './entities/Player.js';
 import { Coin } from './entities/Coin.js';
 import { Enemy } from './entities/Enemy.js';
 import { Platform } from './entities/Platform.js';
+import { FrozenClone } from './entities/FrozenClone.js';
 import { CollisionEngine } from './CollisionEngine.js';
 /**
  * Game Model - Manages the overall game state and entities
@@ -13,10 +14,15 @@ export class GameModel {
         this.player = new Player();
         this.coins = [];
         this.enemies = [];
-        this.platforms = []; 
+        this.platforms = [];
+        this.frozenClones = [];
         this.isGameRunning = true;
         this.collisionEngine = new CollisionEngine();
         this.score = 0;
+        
+        // Place action cooldown
+        this.placeCooldown = 0;
+        this.placeCooldownTime = 1000; // 1 second in milliseconds
     }
 
     /**
@@ -28,13 +34,13 @@ export class GameModel {
         this.coins.push(new Coin(300, 200)); // Example coin
         this.coins.push(new Coin(500, 400)); // Example coin
 
-        this.enemies.push(new Enemy(100, 100)); // Example enemy
-        this.enemies.push(new Enemy(600, 300)); // Example enemy
+        //this.enemies.push(new Enemy(200, 100)); // Example enemy
+        //this.enemies.push(new Enemy(600, 300)); // Example enemy
 
         // Create platform instances
-        this.platforms.push(new Platform(0, 550, 800, 50)); // Ground platform
-        this.platforms.push(new Platform(200, 400, 200, 20)); // Floating platform
-        this.platforms.push(new Platform(500, 250, 150, 20)); // Another platform
+        this.platforms.push(new Platform(0, 550, 800, 20)); // Ground platform
+        //this.platforms.push(new Platform(200, 400, 200, 20)); // Floating platform
+        //awthis.platforms.push(new Platform(500, 250, 150, 20)); // Another platform
 
         // Register entities with collision engine
         this.collisionEngine.register(this.player);
@@ -82,6 +88,9 @@ export class GameModel {
                 // Handle platform collision - stop player movement into platform
                 this.handleStaticCollision(this.player, entity);
             }
+            if (entity instanceof FrozenClone) {
+                this.handleStaticCollision(this.player, entity);
+            }
         });
 
     }
@@ -117,7 +126,7 @@ export class GameModel {
             if (playerBox.y < platformBox.y) {
                 // Player hit platform from above (landing on top)
                 player.y = platformBox.y - playerBox.height - player.bounds.offsetY;
-                player.onGround = true; // Set grounded state if player has this property
+                player.physics.onGround = true; // Set grounded state using physics component
             } else {
                 // Player hit platform from below (hitting ceiling)
                 player.y = platformBox.y + platformBox.height - player.bounds.offsetY;
@@ -133,11 +142,27 @@ export class GameModel {
     update(deltaTime) {
         if (!this.isGameRunning) return;
         
+        // Update cooldowns
+        this.updateCooldowns(deltaTime);
+        
         // Update player physics
         this.player.update(deltaTime);
         
         // Check collisions
         this.collisionEngine.checkCollisions();
+    }
+
+    /**
+     * Update cooldown timers
+     * @param {number} deltaTime - Time elapsed since last frame in seconds
+     */
+    updateCooldowns(deltaTime) {
+        if (this.placeCooldown > 0) {
+            this.placeCooldown -= deltaTime * 1000; // Convert to milliseconds
+            if (this.placeCooldown < 0) {
+                this.placeCooldown = 0;
+            }
+        }
     }
 
     /**
@@ -149,6 +174,33 @@ export class GameModel {
         if (!this.isGameRunning) return;
         
         this.player.applyInput(direction, deltaTime);
+    }
+
+    /**
+     * Handle place action with cooldown
+     * @returns {boolean} Whether the action was successful
+     */
+    handlePlaceAction() {
+        // Check if cooldown is active
+        if (this.placeCooldown > 0) {
+            console.log(`Place action on cooldown. ${(this.placeCooldown / 1000).toFixed(1)}s remaining`);
+            return false;
+        }
+
+        // Get player position
+        const playerPosition = this.player.getPosition();
+        
+        // Set cooldown
+        this.placeCooldown = this.placeCooldownTime;
+        const playerCollisionBox = this.player.bounds.getCollisionBox(this.player);
+        const frozenClone = new FrozenClone(Math.round(playerPosition.x), Math.round(playerPosition.y), playerCollisionBox.width, playerCollisionBox.height);
+        this.frozenClones.push(frozenClone);
+        //register the frozen clone with the collision engine after 150ms
+        setTimeout(() => {
+            this.collisionEngine.register(frozenClone);
+        }, 600); // Register after 150ms grace period
+
+        return true;
     }
 
     /**
@@ -190,6 +242,14 @@ export class GameModel {
      */
     getPlatforms() {
         return this.platforms;
+    }
+
+    /**
+     * Get current placement cooldown
+     * @returns {number} Placement cooldown in milliseconds
+     */
+    getPlaceCooldown() {
+        return this.placeCooldown;
     }
 
     /**
