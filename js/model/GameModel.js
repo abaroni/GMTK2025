@@ -3,6 +3,7 @@ import { Coin } from './entities/Coin.js';
 import { Enemy } from './entities/Enemy.js';
 import { Platform } from './entities/Platform.js';
 import { FrozenClone } from './entities/FrozenClone.js';
+import { Anchor } from './entities/Anchor.js';
 import { CollisionEngine } from './CollisionEngine.js';
 import { LevelParser } from './LevelParser.js';
 /**
@@ -18,6 +19,7 @@ export class GameModel {
         this.enemies = [];
         this.platforms = [];
         this.frozenClones = [];
+        this.anchors = []; // Anchors for reference points (not collidable)
         this.isGameRunning = true;
         this.collisionEngine = new CollisionEngine();
         this.score = 0;
@@ -73,6 +75,10 @@ export class GameModel {
         // Set player position
         if (entities.player) {
             this.player.resetToPosition(entities.player.x, entities.player.y);
+            
+            // Create anchor above the player starting position
+            const anchor = new Anchor(entities.player.x, entities.player.y - 50); // 50 pixels above player
+            this.anchors.push(anchor);
         }
 
         // Register entities with collision engine
@@ -126,7 +132,7 @@ export class GameModel {
                     this.handleStaticCollision(this.player, entity);
                 }
                 if (entity instanceof FrozenClone) {
-                    this.handleFrozenCloneCollision(this.player, entity);
+                    this.handleStaticCollision(this.player, entity);
                 }
             });
         }
@@ -158,6 +164,7 @@ export class GameModel {
         this.enemies = [];
         this.platforms = [];
         this.frozenClones = [];
+        this.anchors = []; // Clear anchors (they don't register with collision engine)
         
         // Don't clear the collision engine completely - keep player registered
     }
@@ -207,55 +214,6 @@ export class GameModel {
         console.log(`Level reset! Score reset to: ${this.score}, player at: (${this.player.x}, ${this.player.y})`);
     }
 
-    handleFrozenCloneCollision(player, entity) {
-        
-        const playerBox = player.bounds.getCollisionBox(player);
-        const platformBox = entity.bounds.getCollisionBox(entity);
-        
-        //SPECIAL CASE: FrozenClone on the ground
-        if (entity instanceof FrozenClone && player.physics.onGround) {
-            // If player collides with a frozen clone while on the ground, move the player on top of the clone
-    
-            player.y = platformBox.y - playerBox.height - player.bounds.offsetY; // Place player on top of the clone
-            player.physics.onGround = true; // Set grounded state using physics component
-            player.velocity.y = 0; // Stop vertical movement
-            return;
-        }
-
-        
-
-        // Calculate overlap on each axis
-        const overlapX = Math.min(playerBox.x + playerBox.width - platformBox.x, 
-                                 platformBox.x + platformBox.width - playerBox.x);
-        const overlapY = Math.min(playerBox.y + playerBox.height - platformBox.y, 
-                                 platformBox.y + platformBox.height - playerBox.y);
-        
-        // Resolve collision on the axis with smallest overlap
-        if (overlapX < overlapY) {
-            // Horizontal collision
-            if (playerBox.x < platformBox.x) {
-                // Player hit platform from the left
-                player.x = platformBox.x - playerBox.width - player.bounds.offsetX;
-            } else {
-                // Player hit platform from the right
-                player.x = platformBox.x + platformBox.width - player.bounds.offsetX;
-            }
-            player.velocity.x = 0; // Stop horizontal movement
-        } else {
-            // Vertical collision
-            if (playerBox.y < platformBox.y) {
-                // Player hit platform from above (landing on top)
-                player.y = platformBox.y - playerBox.height - player.bounds.offsetY;
-                player.physics.onGround = true; // Set grounded state using physics component
-            } else {
-                // Player hit platform from below (hitting ceiling)
-                player.y = platformBox.y + platformBox.height - player.bounds.offsetY;
-            }
-            player.velocity.y = 0; // Stop vertical movement
-        }
-
-    }
-
     /**
      * Handle collision between player and platform
      * @param {Player} player - The player entity
@@ -303,6 +261,8 @@ export class GameModel {
     update(deltaTime) {
         if (!this.isGameRunning) return;
         
+        this.logPlayerIntersections();
+
         // Update cooldowns
         this.updateCooldowns(deltaTime);
         
@@ -358,11 +318,13 @@ export class GameModel {
         this.placeCooldown = this.placeCooldownTime;
         const playerCollisionBox = this.player.bounds.getCollisionBox(this.player);
         const frozenClone = new FrozenClone(Math.round(playerPosition.x)+12, Math.round(playerPosition.y)+12, playerCollisionBox.width, playerCollisionBox.height);
+        frozenClone.boundsEnabled = false; 
         this.frozenClones.push(frozenClone);
+        this.collisionEngine.register(frozenClone);
         //register the frozen clone with the collision engine after 150ms
         setTimeout(() => {
-            this.collisionEngine.register(frozenClone);
-        }, 600); // Register after 150ms grace period
+            frozenClone.boundsEnabled = true; // Enable bounds after grace period
+        }, 600); 
 
         return true;
     }
@@ -386,6 +348,85 @@ export class GameModel {
     getEnemies() {
         return this.enemies;
     }
+
+    /**
+     * Get all frozen clones
+     * @returns {Array} Array of frozen clone objects
+     */
+    getFrozenClones() {
+        return this.frozenClones;
+    }
+
+    /**
+     * Check and log if player is intersecting with any entities
+     * @returns {Array} Array of entity types the player is intersecting with
+     */
+    logPlayerIntersections() {
+        const intersections = [];
+        const playerBox = this.player.bounds.getCollisionBox(this.player);
+
+        // Check intersections with platforms
+        for (const platform of this.platforms) {
+            const platformBox = platform.bounds.getCollisionBox(platform);
+            if (this.isBoxIntersecting(playerBox, platformBox)) {
+                intersections.push('Platform');
+            }
+        }
+
+        // Check intersections with enemies
+        for (const enemy of this.enemies) {
+            const enemyBox = enemy.bounds.getCollisionBox(enemy);
+            if (this.isBoxIntersecting(playerBox, enemyBox)) {
+                intersections.push('Enemy');
+            }
+        }
+
+        // Check intersections with frozen clones
+        for (const frozenClone of this.frozenClones) {
+            if (!frozenClone.boundsEnabled) continue; // Skip if bounds are not enabled
+            const cloneBox = frozenClone.bounds.getCollisionBox(frozenClone);
+            if (this.isBoxIntersecting(playerBox, cloneBox)) {
+                intersections.push('FrozenClone');
+            }
+        }
+
+        // Log results
+        if (intersections.length > 0) {
+            console.log(`Player intersecting with: ${intersections.join(', ')}`);
+            // move player toward the first anchor
+            const firstAnchor = this.anchors[0];
+            if (firstAnchor) {
+                const dx = firstAnchor.x - this.player.x;
+                const dy = firstAnchor.y - this.player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // Move player towards anchor if not already there
+                if (distance > 0) {
+                    const moveSpeed = 25; // Pixels per second
+                    this.player.x += (dx / distance) * moveSpeed * (deltaTime / 1000);
+                    this.player.y += (dy / distance) * moveSpeed * (deltaTime / 1000);
+                }
+            }
+        } else {
+            //console.log('Player not intersecting with any entities');
+        }
+
+        return intersections;
+    }
+
+    /**
+     * Check if two bounding boxes are intersecting
+     * @param {Object} box1 - First bounding box {x, y, width, height}
+     * @param {Object} box2 - Second bounding box {x, y, width, height}
+     * @returns {boolean} True if boxes intersect
+     */
+    isBoxIntersecting(box1, box2) {
+        return box1.x < box2.x + box2.width &&
+               box1.x + box1.width > box2.x &&
+               box1.y < box2.y + box2.height &&
+               box1.y + box1.height > box2.y;
+    }
+
     /**
      * Get canvas dimensions
      * @returns {Object} Canvas dimensions
@@ -411,6 +452,14 @@ export class GameModel {
      */
     getPlatforms() {
         return this.platforms;
+    }
+
+    /**
+     * Get all anchors
+     * @returns {Array} Array of anchor objects
+     */
+    getAnchors() {
+        return this.anchors;
     }
 
     /**

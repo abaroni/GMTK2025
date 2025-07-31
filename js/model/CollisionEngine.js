@@ -39,14 +39,17 @@ export class CollisionEngine {
                 const entityA = this.entities[i];
                 const entityB = this.entities[j];
 
-                if (this.isColliding(entityA, entityB)) {
+                if (CollisionEngine.isColliding(entityA, entityB)) {
                     this.handleCollision(entityA, entityB);
                 }
             }
         }
     }
-    isColliding(entityA, entityB) {
+    static isColliding(entityA, entityB) {
         // Use static Bounds collision detection
+        if( !entityA.boundsEnabled || !entityB.boundsEnabled) {
+            return false; // Skip if bounds are not enabled
+        }
         return Bounds.intersects(entityA, entityB);
     }
     handleCollision(entityA, entityB) {

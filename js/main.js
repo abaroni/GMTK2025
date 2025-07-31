@@ -29,7 +29,8 @@ function setup() {
     gameModel = new GameModel();
     gameView = new GameView(gameModel);
     gameController = new GameController(gameModel, gameView);
-    
+
+    window.gameModel = gameModel; // Make gameModel globally accessible for debugging
     // Initialize all components
     gameModel.init();
     gameView.init();

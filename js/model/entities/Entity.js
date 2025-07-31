@@ -12,6 +12,7 @@ export class Entity {
         
         // Initialize bounds with entity dimensions
         this.bounds = new Bounds(width, height, 0, 0);
+        this.boundsEnabled = true; // Enable bounds by default
         
         // Common entity properties
         this.isStatic = false; // Whether entity moves or not

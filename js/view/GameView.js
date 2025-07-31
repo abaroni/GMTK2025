@@ -289,6 +289,23 @@ export class GameView {
                 rect(clone.x, clone.y, clone.width, clone.height);
             }
         }
+
+        // Draw anchor bounds and positions (grey boxes)
+        const anchors = this.gameModel.getAnchors();
+        for (const anchor of anchors) {
+            // Draw anchor as a filled grey box
+            fill(128, 128, 128, 150); // Semi-transparent grey
+            stroke(100, 100, 100); // Darker grey border
+            strokeWeight(2);
+            rect(anchor.x, anchor.y, anchor.width, anchor.height);
+            
+            // Add a small "A" label for identification
+            fill(255); // White text
+            noStroke();
+            textAlign(CENTER);
+            textSize(12);
+            text("A", anchor.x + anchor.width/2, anchor.y + anchor.height/2 + 4);
+        }
     }
 
     /**
