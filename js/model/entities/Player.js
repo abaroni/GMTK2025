@@ -1,8 +1,8 @@
 import { Bounds } from "./components/Bounds.js";
-import { Physics } from "./components/Physics.js";
+
 export class Player {
     constructor() {
-        this.x = 450;
+        this.x = 400;
         this.y = 450;
         this.size = 64;
         this.maxSpeed = 500; // Maximum speed in pixels per second
@@ -12,7 +12,6 @@ export class Player {
         this.color = { r: 0, g: 255, b: 0 }; // Green color
         
         this.bounds = new Bounds(this.size -24, this.size-12, 12, 12); // Initialize bounds with player size
-        this.physics = new Physics(2000, 400); // Initialize physics component
 
         this.activeDirections = new Set(); // Store currently pressed directions
         
@@ -112,8 +111,6 @@ export class Player {
         }
         if (!hasValidVerticalInput) {
             this.velocity.y *= this.friction;
-            //apply physics gravity
-            this.velocity.y += this.physics.gravity * deltaTime;
         }
         
         // Clear active directions for next frame

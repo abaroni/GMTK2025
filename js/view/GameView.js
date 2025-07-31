@@ -6,6 +6,19 @@ export class GameView {
         this.gameModel = gameModel;
         this.canvas = null;
         this.spriteSheet = null; 
+        this.cameraX = 0;
+        this.houseSpriteSheet = null;
+        this.houseSize = 800;
+        this.houses = [
+                            {color:color(random(255),random(255),random(255)),x:this.houseSize*0}, 
+                            {color:color(random(255),random(255),random(255)),x:this.houseSize*1}, 
+                            {color:color(random(255),random(255),random(255)),x:this.houseSize*2}, 
+                            {color:color(random(255),random(255),random(255)),x:this.houseSize*3}, 
+                            {color:color(random(255),random(255),random(255)),x:this.houseSize*4}, 
+                            {color:color(random(255),random(255),random(255)),x:this.houseSize*5}, 
+                            {color:color(random(255),random(255),random(255)),x:this.houseSize*6}, 
+                            {color:color(random(255),random(255),random(255)),x:this.houseSize*7}, 
+                        ];
     }
 
     /**
@@ -18,6 +31,7 @@ export class GameView {
         this.canvas.parent('game-container');
         
         this.spriteSheet = loadImage('assets/ssheetT.png');
+        this.houseSpriteSheet = loadImage('assets/houses.png');
 
         console.log('GameView initialized');
     }
@@ -26,9 +40,9 @@ export class GameView {
      * Render the entire game frame
      */
     render() {
-        translate(this.gameModel.canvasWidth/2 - this.gameModel.getPlayer().x, 0);
+        this.cameraX = this.gameModel.canvasWidth/2 - this.gameModel.getPlayer().x
+        translate(this.cameraX, 0);
         this.drawBackground();
-        this.drawPlatforms();
         this.drawPlayer();
         this.drawCoins();
         this.drawEnemies();
@@ -43,6 +57,45 @@ export class GameView {
         // Set white background
         background(255, 255, 255);
         
+        const leftOffset = -this.cameraX;
+        const leftFirstHouse = leftOffset-(leftOffset%this.houseSize)-this.houseSize;
+
+        const rightOffset = this.gameModel.canvasWidth - this.cameraX;
+        const rightFirstHouse = rightOffset-(rightOffset%this.houseSize);
+
+
+        let leftmostStoredHouse = null;
+        let rightmostStoredHouse = null;
+        //calculate leftmost stored house
+        for (let i = 0; i < this.houses.length; i++) {
+            if( leftmostStoredHouse === null || this.houses[i].x < leftmostStoredHouse.x) {
+                leftmostStoredHouse = this.houses[i];
+            }
+            if( rightmostStoredHouse === null || this.houses[i].x > rightmostStoredHouse.x) {
+                rightmostStoredHouse = this.houses[i];
+            }
+        }
+        
+        if( leftFirstHouse < leftmostStoredHouse.x) {
+            //need a new house on the left
+            const randomColor = color(random(255), random(255), random(255));
+            this.houses.push({color:randomColor, x:leftFirstHouse});
+        }
+        if( rightFirstHouse > rightmostStoredHouse.x) {
+            //need a new house on the right
+            const randomColor = color(random(255), random(255), random(255));
+            this.houses.push({color:randomColor, x:rightFirstHouse});
+        }
+        
+        //draw all houses
+        for (let i = 0; i < this.houses.length; i++) {
+            fill(this.houses[i].color);
+            rect(this.houses[i].x, 0, this.houseSize, this.houseSize);
+            
+            image(this.houseSpriteSheet, this.houses[i].x, -100, 200*4, 100*4, 0, 0, 200, 100);
+        }
+
+
         // Optional: Add a border
         stroke(200);
         strokeWeight(2);
@@ -50,19 +103,7 @@ export class GameView {
         rect(0, 0, width - 1, height - 1);
     }
 
-    /**
-     * Draw all platforms
-     */
-    drawPlatforms() {
-        const platforms = this.gameModel.getPlatforms();
-        for (const platform of platforms) {
-            // Draw platform as a brown rectangle
-            fill(139, 69, 19); // Brown color for platforms
-            stroke(101, 50, 13); // Darker brown border
-            strokeWeight(2);
-            rect(platform.x, platform.y, platform.width, platform.height);
-        }
-    }
+
 
     /**
      * Draw the player 
@@ -179,36 +220,23 @@ export class GameView {
             }
         }
 
-        // Draw platform bounds and positions
-        const platforms = this.gameModel.getPlatforms();
-        for (const platform of platforms) {
-            if (platform.bounds) {
-                // Draw bounds
-                stroke(180, 180, 180);
-                strokeWeight(1);
-                noFill();
-                const platformBox = platform.bounds.getCollisionBox(platform);
-                rect(platformBox.x, platformBox.y, platformBox.width, platformBox.height);
-                
-                // Draw black border around entity
-                stroke(0, 0, 0); // Black
-                strokeWeight(1);
-                noFill();
-                rect(platform.x, platform.y, platform.width, platform.height);
-            }
-        }
+  
     }
 
     /**
      * Draw UI elements (score, instructions, etc.)
      */
     drawUI() {
+
+        //calculate UI x position to account for camera offset
+        const uiX = 10 - this.cameraX;
+
         // Draw score
         fill(0);
         noStroke();
         textAlign(LEFT);
         textSize(16);
-        text(`Score: ${this.gameModel.getScore()}`, 10, 25);
+        text(`Score: ${this.gameModel.getScore()}`, uiX, 25);
 
         // Draw player debug information
         const player = this.gameModel.getPlayer();
@@ -216,17 +244,21 @@ export class GameView {
         const velocity = player.getVelocity();
         const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
         
-        fill(0, 0, 255); // Blue color for debug info
+        fill(0, 0, 0); // Blue color for debug info
         textAlign(LEFT);
         textSize(12);
         let debugY = 50;
-        text(`Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, 10, debugY);
+        text(`Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, uiX, debugY);
         debugY += 15;
-        text(`Velocity: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)})`, 10, debugY);
+        text(`Velocity: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)})`, uiX, debugY);
         debugY += 15;
-        text(`Speed: ${speed.toFixed(1)} / ${player.maxSpeed}`, 10, debugY);
+        text(`Speed: ${speed.toFixed(1)} / ${player.maxSpeed}`, uiX, debugY);
         debugY += 15;
-        text(`Size: ${player.getSize()}`, 10, debugY);
+        text(`Size: ${player.getSize()}`, uiX, debugY);
+
+        //Draw camera position
+        debugY += 15;
+        text(`Camera X: ${this.cameraX.toFixed(1)}`, uiX, debugY);
 
         // Draw game status
         if (!this.gameModel.isRunning()) {
@@ -240,7 +272,7 @@ export class GameView {
         fill(100);
         textAlign(RIGHT);
         textSize(12);
-        text('Use arrow keys or WASD to move', width - 10, height - 10);
+        text('Use arrow keys or WASD to move', width + uiX - 15, height - 10);
     }
 
     /**

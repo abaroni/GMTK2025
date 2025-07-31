@@ -13,7 +13,6 @@ export class GameModel {
         this.player = new Player();
         this.coins = [];
         this.enemies = [];
-        this.platforms = []; 
         this.isGameRunning = true;
         this.collisionEngine = new CollisionEngine();
         this.score = 0;
@@ -31,10 +30,6 @@ export class GameModel {
         this.enemies.push(new Enemy(100, 100)); // Example enemy
         this.enemies.push(new Enemy(600, 300)); // Example enemy
 
-        // Create platform instances
-        this.platforms.push(new Platform(0, 550, 800, 50)); // Ground platform
-        this.platforms.push(new Platform(200, 400, 200, 20)); // Floating platform
-        this.platforms.push(new Platform(500, 250, 150, 20)); // Another platform
 
         // Register entities with collision engine
         this.collisionEngine.register(this.player);
@@ -44,9 +39,7 @@ export class GameModel {
         for (const enemy of this.enemies) {
             this.collisionEngine.register(enemy);
         }
-        for (const platform of this.platforms) {
-            this.collisionEngine.register(platform);
-        }
+        
         this.collisionEngine.subscribe(this.player, (entity) => {
             if (entity instanceof Coin) {
                 //remove the coin from the game
@@ -183,15 +176,7 @@ export class GameModel {
     getScore() {
         return this.score;
     }
-
-    /**
-     * Get all platforms
-     * @returns {Array} Array of platform objects
-     */
-    getPlatforms() {
-        return this.platforms;
-    }
-
+    
     /**
      * Check if game is running
      * @returns {boolean} Game running state
