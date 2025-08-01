@@ -96,12 +96,12 @@ export class GameView {
      * Draw the background
      */
     drawBackground() {
-        background(200, 200, 200);
+        background("#232836");
         
         // Draw parallax layers - furthest to nearest (more visible speeds for testing)
-        this.drawParallaxLayer(0.1, 200, 250, 100, 0, color(220, 220, 220, 255)); // Far mountains - slow but visible
-        this.drawParallaxLayer(0.2, 100, 225, 75, 0, color(240, 220, 210, 255)); // Mid mountains
-        this.drawParallaxLayer(0.3, 150, 200, 50, 0, color(170, 200, 200, 255)); // Near hills - medium speed
+        this.drawParallaxLayer(0.1, 200, 250, 100, 0, color( "#0B0B0F")); // Far mountains - slow but visible
+        this.drawParallaxLayer(0.2, 100, 225, 75, 0, color("#14141C")); // Mid mountains
+        this.drawParallaxLayer(0.3, 150, 200, 50, 0, color("#1E1F2B")); // Near hills - medium speed
         //this.drawParallaxLayer(0.7, 100, 100, 50, 50, color(100, 150, 255, 255)); // Foreground elements
     }
 
@@ -156,7 +156,7 @@ export class GameView {
             // Set blue tint for frozen clones
             //tint(100, 100, 255, 200); // Light blue with some transparency
             // Draw the animated sprite
-            image(this.newSpriteSheet, position.x - 12, position.y - 12, this.gameModel.player.getSize(), this.gameModel.player.getSize(), 16*4, 16*7, 16, 16);
+            image(this.newSpriteSheet, position.x , position.y , this.gameModel.player.getSize(), this.gameModel.player.getSize(), 16*4, 16*7, 16, 16);
             // Reset tint for other drawings
             //noTint();
         }
@@ -217,15 +217,26 @@ export class GameView {
             const size = coin.size;
 
             const frame = coin.getAnimationFrame();
-            // Calculate sprite sheet coordinates for each frame
-            const frameXPositions = [16, 32, 48]; // X coordinates for frames 0-2
-            const spriteX = frameXPositions[frame];
-            const spriteY = 16*4; // Y coordinate for the player sprite rowd
-            
-            // Set blue tint for frozen clones
-            //tint(100, 100, 255, 200); // Light blue with some transparency
-            // Draw the animated sprite
-            image(this.newSpriteSheet, position.x , position.y , size, size, spriteX, spriteY, 16, 16);
+            if (coin.isPlayingCustomAnimation) {                
+                const spriteX = 16*3;
+                const spriteY = 16*4; // Y coordinate for the player sprite rowd
+                
+                // Set blue tint for frozen clones
+                //tint(100, 100, 255, 200); // Light blue with some transparency
+                // Draw the animated sprite
+                image(this.newSpriteSheet, position.x , position.y , size, size, spriteX, spriteY, 16, 16);
+            }else{
+                // Calculate sprite sheet coordinates for each frame
+                const frameXPositions = [16, 32, 48]; // X coordinates for frames 0-2
+                const spriteX = frameXPositions[frame];
+                const spriteY = 16*4; // Y coordinate for the player sprite rowd
+                
+                // Set blue tint for frozen clones
+                //tint(100, 100, 255, 200); // Light blue with some transparency
+                // Draw the animated sprite
+                image(this.newSpriteSheet, position.x , position.y , size, size, spriteX, spriteY, 16, 16);
+            }
+
         }
     }
     drawEnemies() {
@@ -254,19 +265,55 @@ export class GameView {
      * Draw debug bounds for all entities with collision boxes
      */
     drawDebugBounds() {
+        // Draw player debug information
+        const debugPlayer = this.gameModel.getPlayer();
+        const position = debugPlayer.getPosition();
+        const velocity = debugPlayer.getVelocity();
+        const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+        
+        // Get camera offset for UI positioning
+        const cameraOffset = this.camera.getOffset();
+        const offsetX = 10 - cameraOffset.x;
+        
+        fill(0, 0, 255); // Blue color for debug info
+        noStroke();
+        textAlign(LEFT);
+        textSize(12);
+        let debugY = 80 - cameraOffset.y;
+        text(`FPS: ${this.currentFPS}`, offsetX, debugY);
+        debugY += 15;
+        text(`Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, offsetX, debugY);
+        debugY += 15;
+        text(`Velocity: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)})`, offsetX, debugY);
+        debugY += 15;
+        text(`Speed: ${speed.toFixed(1)} / ${debugPlayer.maxSpeed}`, offsetX, debugY);
+        debugY += 15;
+        text(`Size: ${debugPlayer.getSize()}`, offsetX, debugY);
+        debugY += 15;
+        
+        // Draw placement cooldown info
+        const placeCooldown = this.gameModel.getPlaceCooldown ? this.gameModel.getPlaceCooldown() : 0;
+ 
+        if (placeCooldown > 0) {
+            text(`Place Cooldown: ${(placeCooldown / 1000).toFixed(1)}s`, offsetX, debugY);
+        } else {
+            text(`Place: Ready`, offsetX, debugY);
+        }
+
         // Set light gray color for debug bounds
         stroke(180, 180, 180); // Light gray
         strokeWeight(1);
         noFill();
 
         // Draw player bounds and position
-        const player = this.gameModel.getPlayer();
+        const player = debugPlayer;
         if (player.bounds) {
             const playerBox = player.bounds.getCollisionBox(player);
+            stroke(255, 0, 0, 128); 
             rect(playerBox.x, playerBox.y, playerBox.width, playerBox.height);
             
-            // Draw black border around entity
-            stroke(0, 0, 0); // Black
+            
+            stroke(255, 0, 0, 128); 
             strokeWeight(1);
             noFill();
             rect(player.x, player.y, player.getSize(), player.getSize());
@@ -334,14 +381,14 @@ export class GameView {
         for (const clone of frozenClones) {
             if (clone.bounds) {
                 // Draw bounds
-                stroke(200, 200, 255); // Light blue for frozen clones
+                stroke(0, 0, 255,128);
                 strokeWeight(1);
                 noFill();
                 const cloneBox = clone.bounds.getCollisionBox(clone);
                 rect(cloneBox.x, cloneBox.y, cloneBox.width, cloneBox.height);
                 
                 // Draw black border around entity
-                stroke(0, 0, 0); // Black
+                stroke(0, 0, 255,128);
                 strokeWeight(1);
                 noFill();
                 rect(clone.x, clone.y, clone.width, clone.height);
@@ -401,7 +448,7 @@ export class GameView {
      */
     drawUI() {
         // Draw score
-        fill(0);
+        fill(color(255, 255, 255,128)); // Set text color to white
         noStroke();
         textAlign(LEFT);
         textSize(16);
@@ -412,34 +459,13 @@ export class GameView {
         const offsetY = 25 - cameraOffset.y;
         text(`Score: ${this.gameModel.getScore()} / ${this.gameModel.getTotalCoins() * 10}`, offsetX, offsetY);
 
-        // Draw player debug information
-        const player = this.gameModel.getPlayer();
-        const position = player.getPosition();
-        const velocity = player.getVelocity();
-        const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
-        
-        fill(0, 0, 255); // Blue color for debug info
-        textAlign(LEFT);
+
+        // Draw controls info
+        fill(color(255, 255, 255,128)); // Set text color to white
+        textAlign(RIGHT);
         textSize(12);
-        let debugY = 50 - cameraOffset.y;
-        text(`FPS: ${this.currentFPS}`, offsetX, debugY);
-        debugY += 15;
-        text(`Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, offsetX, debugY);
-        debugY += 15;
-        text(`Velocity: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)})`, offsetX, debugY);
-        debugY += 15;
-        text(`Speed: ${speed.toFixed(1)} / ${player.maxSpeed}`, offsetX, debugY);
-        debugY += 15;
-        text(`Size: ${player.getSize()}`, offsetX, debugY);
-        debugY += 15;
+        text('Use arrow keys or WASD to move, space to place a frozen clone', offsetX + width - 20, this.gameModel.canvasHeight - 10 - cameraOffset.y);
         
-        // Draw placement cooldown info
-        const placeCooldown = this.gameModel.getPlaceCooldown ? this.gameModel.getPlaceCooldown() : 0;
-        if (placeCooldown > 0) {
-            text(`Place Cooldown: ${(placeCooldown / 1000).toFixed(1)}s`, offsetX, debugY);
-        } else {
-            text(`Place: Ready`, offsetX, debugY);
-        }
 
         // Draw game status
         if (!this.gameModel.isRunning()) {
@@ -449,11 +475,6 @@ export class GameView {
             text('PAUSED', width / 2, height / 2);
         }
 
-        // Draw controls info
-        fill(100);
-        textAlign(RIGHT);
-        textSize(12);
-        text('Use arrow keys or WASD to move, space to place a frozen clone', offsetX + width - 20, this.gameModel.canvasHeight - 10 - cameraOffset.y);
     }
 
     /**

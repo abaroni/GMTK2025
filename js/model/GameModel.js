@@ -103,8 +103,13 @@ export class GameModel {
             this.collisionEngine.subscribe(this.player, (entity) => {
                 if (entity instanceof Coin) {
                     //remove the coin from the game
-                    this.coins = this.coins.filter(c => c !== entity);
+                    //this.coins = this.coins.filter(c => c !== entity);
                     this.collisionEngine.unregister(entity);
+                    entity.playCustomAnimation({onComplete: () => {
+                            // Remove coin from game after animation completes
+                            this.coins = this.coins.filter(c => c !== entity);
+                        },
+                    })
                     this.score += 10; // Increment score on collision with coin
                 }
                 if (entity instanceof Enemy) {
@@ -335,7 +340,7 @@ export class GameModel {
         // Set cooldown
         this.placeCooldown = this.placeCooldownTime;
         const playerCollisionBox = this.player.bounds.getCollisionBox(this.player);
-        const frozenClone = new FrozenClone(Math.round(playerPosition.x)+12, Math.round(playerPosition.y)+12, playerCollisionBox.width, playerCollisionBox.height);
+        const frozenClone = new FrozenClone(Math.round(playerPosition.x), Math.round(playerPosition.y), this.player.width, this.player.height);
         frozenClone.boundsEnabled = false; 
         this.frozenClones.push(frozenClone);
         this.collisionEngine.register(frozenClone);

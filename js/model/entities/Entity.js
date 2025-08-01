@@ -20,6 +20,10 @@ export class Entity {
         this.animationSpeed = 0.15; // Seconds per frame (configurable)
         this.maxAnimationFrames = 3; // Maximum number of animation frames (0-2)
         this.animationEnabled = false; // Whether this entity should animate
+        
+        // Custom animation properties
+        this.customAnimation = null; // Current custom animation object
+        this.isPlayingCustomAnimation = false; // Whether a custom animation is playing
     }
 
     /**
@@ -69,8 +73,11 @@ export class Entity {
      * @param {number} deltaTime - Time elapsed since last frame in seconds
      */
     update(deltaTime) {
-        // Update animation if enabled
-        if (this.animationEnabled) {
+        // Update custom animation if playing (takes priority over regular animation)
+        if (this.isPlayingCustomAnimation && this.customAnimation) {
+            this.updateCustomAnimation(deltaTime);
+        } else if (this.animationEnabled) {
+            // Update regular animation if no custom animation is playing
             this.updateAnimation(deltaTime);
         }
         
@@ -118,5 +125,97 @@ export class Entity {
         if (maxFrames) {
             this.maxAnimationFrames = maxFrames;
         }
+    }
+
+    /**
+     * Play a custom animation with a callback when finished
+     * @param {Object} animationConfig - Animation configuration
+     * @param {number} animationConfig.frameCount - Number of frames in the animation
+     * @param {number} animationConfig.frameSpeed - Seconds per frame
+     * @param {number} animationConfig.startFrame - Starting frame (default: 0)
+     * @param {boolean} animationConfig.loop - Whether to loop the animation (default: false)
+     * @param {Function} animationConfig.onComplete - Callback when animation completes
+     */
+    playCustomAnimation(animationConfig) {
+        const config = {
+            frameCount: 3,
+            frameSpeed: 0.1,
+            startFrame: 0,
+            loop: false,
+            onComplete: null,
+            ...animationConfig
+        };
+
+        this.customAnimation = {
+            frameCount: config.frameCount,
+            frameSpeed: config.frameSpeed,
+            startFrame: config.startFrame,
+            loop: config.loop,
+            onComplete: config.onComplete,
+            currentFrame: config.startFrame,
+            timer: 0,
+            hasCompleted: false
+        };
+
+        this.isPlayingCustomAnimation = true;
+        this.animationFrame = config.startFrame; // Set initial frame
+    }
+
+    /**
+     * Update custom animation frame based on timer
+     * @param {number} deltaTime - Time elapsed since last frame in seconds
+     */
+    updateCustomAnimation(deltaTime) {
+        if (!this.customAnimation) return;
+
+        this.customAnimation.timer += deltaTime;
+
+        // Check if it's time to advance to next frame
+        if (this.customAnimation.timer >= this.customAnimation.frameSpeed) {
+            this.customAnimation.currentFrame++;
+            this.customAnimation.timer = 0; // Reset timer
+
+            // Check if animation has completed
+            if (this.customAnimation.currentFrame >= this.customAnimation.startFrame + this.customAnimation.frameCount) {
+                if (this.customAnimation.loop) {
+                    // Loop back to start frame
+                    this.customAnimation.currentFrame = this.customAnimation.startFrame;
+                } else {
+                    // Animation completed
+                    this.customAnimation.hasCompleted = true;
+                    this.isPlayingCustomAnimation = false;
+                    
+                    // Call completion callback if provided
+                    if (this.customAnimation.onComplete && typeof this.customAnimation.onComplete === 'function') {
+                        this.customAnimation.onComplete();
+                    }
+                    
+                    // Clear custom animation
+                    this.customAnimation = null;
+                    return;
+                }
+            }
+
+            // Update the entity's animation frame
+            this.animationFrame = this.customAnimation.currentFrame;
+        }
+    }
+
+    /**
+     * Stop any currently playing custom animation
+     */
+    stopCustomAnimation() {
+        if (this.isPlayingCustomAnimation) {
+            this.isPlayingCustomAnimation = false;
+            this.customAnimation = null;
+        }
+    }
+
+    /**
+     * Check if a custom animation is currently playing
+     * @returns {boolean} Whether a custom animation is playing
+     */
+    isCustomAnimationPlaying() {
+        return this.isPlayingCustomAnimation;
     }
 }
