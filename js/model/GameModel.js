@@ -141,7 +141,7 @@ export class GameModel {
                             this.coins = this.coins.filter(c => c !== entity);
                         },
                     })
-                    this.score += 10; // Increment score on collision with coin
+                    this.score += 1; // Increment score on collision with coin
                 }
                 if (entity instanceof Enemy) {
                     this.score -= 10; // Decrement score on collision with enemy
@@ -195,6 +195,8 @@ export class GameModel {
             this.collisionEngine.unregister(frozenClone);
         }
         
+        this.score = 0;
+
         // Clear entity arrays
         this.coins = [];
         this.enemies = [];
@@ -443,7 +445,16 @@ export class GameModel {
         // Set cooldown
         this.placeCooldown = this.placeCooldownTime;
         const playerCollisionBox = this.player.bounds.getCollisionBox(this.player);
-        const frozenClone = new FrozenClone(Math.round(playerPosition.x), Math.round(playerPosition.y), this.player.width, this.player.height);
+        
+        // Create frozen clone with destruction callback
+        const frozenClone = new FrozenClone(
+            Math.round(playerPosition.x), 
+            Math.round(playerPosition.y), 
+            this.player.width, 
+            this.player.height,
+            (clone) => this.removeFrozenClone(clone) // Destruction callback
+        );
+        
         frozenClone.boundsEnabled = false; 
         this.frozenClones.push(frozenClone);
         this.collisionEngine.register(frozenClone);
@@ -453,6 +464,20 @@ export class GameModel {
         }, 600); 
 
         return true;
+    }
+
+    /**
+     * Remove a frozen clone from the game
+     * @param {FrozenClone} clone - The clone to remove
+     */
+    removeFrozenClone(clone) {
+        // Unregister from collision engine
+        this.collisionEngine.unregister(clone);
+        
+        // Remove from frozen clones array
+        this.frozenClones = this.frozenClones.filter(c => c !== clone);
+        
+        console.log(`Frozen clone destroyed. Remaining clones: ${this.frozenClones.length}`);
     }
 
     /**

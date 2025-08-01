@@ -497,7 +497,7 @@ export class GameView {
         text(`Loop: ${this.gameModel.getCurrentLevel()}/${this.gameModel.getMaxLevel()}`, offsetX, offsetY);
         
         // Draw score
-        text(`Score: ${this.gameModel.getScore()} / ${this.gameModel.getTotalCoins() * 10}`, offsetX, offsetY + 20);
+        text(`Snowflakes: ${this.gameModel.getScore()} / ${this.gameModel.getTotalCoins() }`, offsetX, offsetY + 20);
 
         // Draw controls info
         fill(color(255, 255, 255,128)); // Set text color to white
