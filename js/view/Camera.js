@@ -11,13 +11,13 @@
  *   camera.applyTransform();
  * 
  *   // Camera controls
- *   camera.setDamping(0.1);        // Smooth following
- *   camera.setPlayerOffset(150);   // Offset for look-ahead
+ *   camera.setDeadZone(300, 200);   // Set dead zone size
  * 
  *   // Parallax background
  *   const offset = camera.getOffset();
  *   drawParallax(offset.x * 0.5);
  */
+
 export class Camera {
     constructor(canvasWidth, canvasHeight) {
         this.canvasWidth = canvasWidth;
@@ -32,8 +32,10 @@ export class Camera {
         this.targetY = 0;
         
         // Camera settings
-        this.damping = 0.05; // How fast camera follows (0.1 = smooth, 1.0 = instant)
-        this.playerOffsetX = 100; // Offset to adjust for player facing direction
+        // Dead zone settings
+        this.deadZoneWidth = 200; // Width of the dead zone in pixels
+        this.deadZoneHeight = 150; // Height of the dead zone in pixels
+        this.showDeadZone = true; // Whether to draw debug lines for dead zone
     }
 
     /**
@@ -41,7 +43,8 @@ export class Camera {
      * @param {Object} target - Target entity with x, y properties
      */
     init(target) {
-        this.targetX = this.canvasWidth / 2 - target.x - this.playerOffsetX;
+        // Start with player centered on screen, no offset applied
+        this.targetX = this.canvasWidth / 2 - target.x;
         this.targetY = this.canvasHeight / 2 - target.y;
         
         // Set initial position to target (no interpolation on first frame)
@@ -53,14 +56,46 @@ export class Camera {
      * Update camera to follow a target entity
      * @param {Object} target - Target entity with x, y properties
      */
-    followTarget(target) {
-        // Calculate target camera position (where we want the camera to be)
-        this.targetX = this.canvasWidth / 2 - target.x - this.playerOffsetX;
-        this.targetY = this.canvasHeight / 2 - target.y;
+    followTarget(target) {        
+        // Get current player position on screen (accounting for player size)
+        const playerScreenX = target.x + this.offsetX;
+        const playerScreenY = target.y + this.offsetY;
+        const playerRightX = playerScreenX + target.getSize();
+        const playerBottomY = playerScreenY + target.getSize();
         
-        // Smoothly interpolate current camera position toward target
-        this.offsetX = this.lerp(this.offsetX, this.targetX, this.damping);
-        this.offsetY = this.lerp(this.offsetY, this.targetY, this.damping);
+        // Calculate dead zone boundaries (centered on screen)
+        const deadZoneLeft = (this.canvasWidth - this.deadZoneWidth) / 2;
+        const deadZoneRight = (this.canvasWidth + this.deadZoneWidth) / 2;
+        const deadZoneTop = (this.canvasHeight - this.deadZoneHeight) / 2;
+        const deadZoneBottom = (this.canvasHeight + this.deadZoneHeight) / 2;
+        
+        // Only move camera if player is outside dead zone
+        let newOffsetX = this.offsetX;
+        let newOffsetY = this.offsetY;
+        
+        // Check if player is outside dead zone horizontally
+        if (playerScreenX < deadZoneLeft) {
+            // Player's left edge is outside dead zone - move camera left
+            newOffsetX = this.offsetX + (deadZoneLeft - playerScreenX);
+        } else if (playerRightX > deadZoneRight) {
+            // Player's right edge is outside dead zone - move camera right
+            newOffsetX = this.offsetX + (deadZoneRight - playerRightX);
+        }
+        
+        // Check if player is outside dead zone vertically
+        if (playerScreenY < deadZoneTop) {
+            // Player's top edge is outside dead zone - move camera up
+            newOffsetY = this.offsetY + (deadZoneTop - playerScreenY);
+        } else if (playerBottomY > deadZoneBottom) {
+            // Player's bottom edge is outside dead zone - move camera down
+            newOffsetY = this.offsetY + (deadZoneBottom - playerBottomY);
+        }
+        
+        // Apply camera position instantly (no interpolation)
+        this.offsetX = newOffsetX;
+        this.offsetY = newOffsetY;
+        this.targetX = newOffsetX;
+        this.targetY = newOffsetY;
     }
 
     /**
@@ -68,7 +103,9 @@ export class Camera {
      * This should be called before drawing game objects
      */
     applyTransform() {
-        translate(this.offsetX, this.offsetY);
+        const roundedX = Math.round(this.offsetX);
+        const roundedY = Math.round(this.offsetY);
+        translate(roundedX, roundedY);
     }
 
     /**
@@ -83,30 +120,21 @@ export class Camera {
     }
 
     /**
-     * Set camera damping (smoothness of following)
-     * @param {number} damping - Damping value (0-1, where 1 is instant)
+     * Set dead zone size
+     * @param {number} width - Width of the dead zone in pixels
+     * @param {number} height - Height of the dead zone in pixels
      */
-    setDamping(damping) {
-        this.damping = Math.max(0, Math.min(1, damping));
+    setDeadZone(width, height) {
+        this.deadZoneWidth = width;
+        this.deadZoneHeight = height;
     }
 
     /**
-     * Set player offset for camera positioning
-     * @param {number} offsetX - Horizontal offset from center
+     * Toggle dead zone debug visualization
+     * @param {boolean} show - Whether to show the dead zone debug lines
      */
-    setPlayerOffset(offsetX) {
-        this.playerOffsetX = offsetX;
-    }
-
-    /**
-     * Linear interpolation helper
-     * @param {number} start - Starting value
-     * @param {number} end - Ending value
-     * @param {number} amount - Interpolation amount (0-1)
-     * @returns {number} Interpolated value
-     */
-    lerp(start, end, amount) {
-        return start * (1 - amount) + end * amount;
+    setShowDeadZone(show) {
+        this.showDeadZone = show;
     }
 
     /**

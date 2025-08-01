@@ -2,6 +2,7 @@
  * Game View - Handles all rendering and visual presentation
  */
 import { Camera } from './Camera.js';
+import { PlatformRenderer } from './renderers/PlatformRenderer.js';
 
 export class GameView {
     constructor(gameModel) {
@@ -12,6 +13,18 @@ export class GameView {
         // Initialize camera with canvas dimensions
         const canvasDimensions = this.gameModel.getCanvasDimensions();
         this.camera = new Camera(canvasDimensions.width, canvasDimensions.height);
+        
+        // Initialize platform renderer (will be set up in init())
+        this.platformRenderer = null;
+        
+        // FPS tracking
+        this.frameCount = 0;
+        this.lastFPSUpdate = Date.now();
+        this.currentFPS = 0;
+        this.fpsUpdateInterval = 50;
+        
+        // Debug settings
+        this.showDebugBounds = true; // Default to showing debug bounds 
     }
 
     /**
@@ -25,6 +38,10 @@ export class GameView {
         
         this.spriteSheet = loadImage('assets/ssheetT.png');
         this.newSpriteSheet = loadImage('assets/BunSpriteSheet.png'); 
+        
+        // Initialize platform renderer with tile sheet and matching tile size
+        this.platformRenderer = new PlatformRenderer(this.newSpriteSheet, 50);
+        
         // Initialize camera to follow the player
         this.camera.init(this.gameModel.getPlayer());
 
@@ -35,6 +52,9 @@ export class GameView {
      * Render the entire game frame
      */
     render() {
+        // Update FPS tracking
+        this.updateFPS();
+        
         // Update camera to follow the player
         this.camera.followTarget(this.gameModel.getPlayer());
         // Draw background BEFORE camera translation so it can have its own parallax movement
@@ -47,21 +67,41 @@ export class GameView {
         this.drawPlayer();
         this.drawCoins();
         this.drawEnemies();
-        //this.drawDebugBounds();
+        if (this.showDebugBounds) {
+            this.drawDebugBounds();
+        }
         this.drawUI();
+    }
+
+    /**
+     * Update FPS tracking
+     */
+    updateFPS() {
+        this.frameCount++;
+        const currentTime = Date.now();
+        const timeDelta = currentTime - this.lastFPSUpdate;
+        
+        // Update FPS display every fpsUpdateInterval milliseconds
+        if (timeDelta >= this.fpsUpdateInterval) {
+            this.currentFPS = Math.round((this.frameCount / timeDelta) * 1000);
+            this.frameCount = 0;
+            this.lastFPSUpdate = currentTime;
+            if (this.currentFPS < 59) {
+                console.warn(`Low FPS detected: ${this.currentFPS}`);
+            }
+        }
     }
 
     /**
      * Draw the background
      */
     drawBackground() {
-        // Set white background
-        background(255, 255, 255);
+        background(200, 200, 200);
         
         // Draw parallax layers - furthest to nearest (more visible speeds for testing)
         this.drawParallaxLayer(0.1, 200, 250, 100, 0, color(220, 220, 220, 255)); // Far mountains - slow but visible
-        this.drawParallaxLayer(0.2, 100, 225, 75, 0, color(250, 230, 220, 255)); // Mid mountains
-        this.drawParallaxLayer(0.3, 150, 200, 50, 0, color(150, 240, 200, 255)); // Near hills - medium speed
+        this.drawParallaxLayer(0.2, 100, 225, 75, 0, color(240, 220, 210, 255)); // Mid mountains
+        this.drawParallaxLayer(0.3, 150, 200, 50, 0, color(170, 200, 200, 255)); // Near hills - medium speed
         //this.drawParallaxLayer(0.7, 100, 100, 50, 50, color(100, 150, 255, 255)); // Foreground elements
     }
 
@@ -123,16 +163,13 @@ export class GameView {
     }
 
     /**
-     * Draw all platforms
+     * Draw all platforms using tile-based rendering
      */
     drawPlatforms() {
         const platforms = this.gameModel.getPlatforms();
         for (const platform of platforms) {
-            // Draw platform as a brown rectangle
-            fill(140, 90, 90); // Brown color for platforms
-            stroke(100, 20, 20); // Darker brown border
-            strokeWeight(2);
-            rect(platform.x, platform.y, platform.width, platform.height);
+            // Use tile-based platform renderer with all platforms for adjacency checking
+            this.platformRenderer.drawPlatform(platform, platforms);
         }
     }
 
@@ -179,11 +216,16 @@ export class GameView {
             const position = { x: coin.x, y: coin.y };
             const size = coin.size;
 
-            // Draw the coin as a circle
-            fill(255, 215, 0); // Gold color
-            stroke(0);
-            strokeWeight(1);
-            ellipse(position.x + size / 2, position.y + size / 2, size, size);
+            const frame = coin.getAnimationFrame();
+            // Calculate sprite sheet coordinates for each frame
+            const frameXPositions = [16, 32, 48]; // X coordinates for frames 0-2
+            const spriteX = frameXPositions[frame];
+            const spriteY = 16*4; // Y coordinate for the player sprite rowd
+            
+            // Set blue tint for frozen clones
+            //tint(100, 100, 255, 200); // Light blue with some transparency
+            // Draw the animated sprite
+            image(this.newSpriteSheet, position.x , position.y , size, size, spriteX, spriteY, 16, 16);
         }
     }
     drawEnemies() {
@@ -322,6 +364,36 @@ export class GameView {
             textSize(12);
             text("A", anchor.x + anchor.width/2, anchor.y + anchor.height/2 + 4);
         }
+        
+        // Draw camera dead zone debug
+        if (this.camera.showDeadZone) {
+            // Calculate dead zone boundaries in world space
+            const deadZoneLeft = (this.camera.canvasWidth - this.camera.deadZoneWidth) / 2 - this.camera.offsetX;
+            const deadZoneRight = (this.camera.canvasWidth + this.camera.deadZoneWidth) / 2 - this.camera.offsetX;
+            const deadZoneTop = (this.camera.canvasHeight - this.camera.deadZoneHeight) / 2 - this.camera.offsetY;
+            const deadZoneBottom = (this.camera.canvasHeight + this.camera.deadZoneHeight) / 2 - this.camera.offsetY;
+            
+            // Draw dead zone rectangle
+            stroke(255, 0, 255, 150); // Magenta with transparency
+            strokeWeight(2);
+            noFill();
+            rect(deadZoneLeft, deadZoneTop, this.camera.deadZoneWidth, this.camera.deadZoneHeight);
+            
+            // Draw center crosshairs
+            stroke(255, 0, 255, 100);
+            strokeWeight(1);
+            const centerX = this.camera.canvasWidth / 2 - this.camera.offsetX;
+            const centerY = this.camera.canvasHeight / 2 - this.camera.offsetY;
+            
+            // Horizontal center line
+            line(deadZoneLeft - 20, centerY, deadZoneRight + 20, centerY);
+            // Vertical center line
+            line(centerX, deadZoneTop - 20, centerX, deadZoneBottom + 20);
+            
+            // Reset stroke for other drawings
+            strokeWeight(1);
+            stroke(0);
+        }
     }
 
     /**
@@ -350,6 +422,8 @@ export class GameView {
         textAlign(LEFT);
         textSize(12);
         let debugY = 50 - cameraOffset.y;
+        text(`FPS: ${this.currentFPS}`, offsetX, debugY);
+        debugY += 15;
         text(`Position: (${position.x.toFixed(1)}, ${position.y.toFixed(1)})`, offsetX, debugY);
         debugY += 15;
         text(`Velocity: (${velocity.x.toFixed(1)}, ${velocity.y.toFixed(1)})`, offsetX, debugY);
@@ -401,6 +475,14 @@ export class GameView {
      */
     getCamera() {
         return this.camera;
+    }
+
+    /**
+     * Set debug bounds visibility
+     * @param {boolean} show - Whether to show debug bounds
+     */
+    setShowDebugBounds(show) {
+        this.showDebugBounds = show;
     }
 
     /**

@@ -14,8 +14,12 @@ export class Entity {
         this.bounds = new Bounds(width, height, 0, 0);
         this.boundsEnabled = true; // Enable bounds by default
         
-        // Common entity properties
-        this.isStatic = false; // Whether entity moves or not
+        // Animation properties
+        this.animationFrame = 0; // Current animation frame (0-3)
+        this.animationTimer = 0; // Timer for animation
+        this.animationSpeed = 0.15; // Seconds per frame (configurable)
+        this.maxAnimationFrames = 3; // Maximum number of animation frames (0-2)
+        this.animationEnabled = false; // Whether this entity should animate
     }
 
     /**
@@ -65,7 +69,54 @@ export class Entity {
      * @param {number} deltaTime - Time elapsed since last frame in seconds
      */
     update(deltaTime) {
-        // Base implementation does nothing
-        // Override in subclasses that need to update
+        // Update animation if enabled
+        if (this.animationEnabled) {
+            this.updateAnimation(deltaTime);
+        }
+        
+        // Base implementation does nothing else
+        // Override in subclasses that need additional update logic
+    }
+
+    /**
+     * Update animation frame based on timer
+     * @param {number} deltaTime - Time elapsed since last frame in seconds
+     */
+    updateAnimation(deltaTime) {
+        this.animationTimer += deltaTime;
+        
+        // Check if it's time to advance to next frame
+        if (this.animationTimer >= this.animationSpeed) {
+            this.animationFrame = (this.animationFrame + 1) % this.maxAnimationFrames;
+            this.animationTimer = 0; // Reset timer
+        }
+    }
+
+    /**
+     * Set animation speed
+     * @param {number} speed - Seconds per frame
+     */
+    setAnimationSpeed(speed) {
+        this.animationSpeed = speed;
+    }
+
+    /**
+     * Get current animation frame
+     * @returns {number} Current frame
+     */
+    getAnimationFrame() {
+        return this.animationFrame;
+    }
+
+    /**
+     * Enable or disable animation for this entity
+     * @param {boolean} enabled - Whether animation should be enabled
+     * @param {number} maxFrames - Maximum number of animation frames (optional)
+     */
+    setAnimationEnabled(enabled, maxFrames = 3) {
+        this.animationEnabled = enabled;
+        if (maxFrames) {
+            this.maxAnimationFrames = maxFrames;
+        }
     }
 }

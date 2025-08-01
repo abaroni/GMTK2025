@@ -70,6 +70,10 @@ export class GameController {
         this.gameModel.handlePlaceAction();
     }
     onKeyReleased(keyCode) {
+        // Handle jump key release for variable jump height
+        if (keyCode === UP_ARROW || keyCode === 87) { // UP_ARROW or W key
+            this.gameModel.getPlayer().onJumpKeyRelease();
+        }
     }
     
     onResize() {

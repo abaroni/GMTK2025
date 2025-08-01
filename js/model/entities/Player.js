@@ -1,6 +1,7 @@
 import { Entity } from "./Entity.js";
 import { Bounds } from "./components/Bounds.js";
 import { Physics } from "./components/Physics.js";
+import { Utils } from "../../utils.js";
 
 export class Player extends Entity {
     constructor() {
@@ -13,7 +14,8 @@ export class Player extends Entity {
         this.maxSpeed = 500; // Maximum speed in pixels per second
         this.velocity = { x: 0, y: 0 }; // Current velocity
         this.acceleration = 500; // How quickly player reaches max speed
-        this.friction = 0.85; // Velocity decay when no input (per frame)
+        this.frictionX = 0.85; // Horizontal friction when no input
+        this.frictionY = 0.98; // Vertical friction (not used in simplified system)
         this.color = { r: 0, g: 255, b: 0 }; // Green color
         this.facingDirection = 'right'; 
         this.isRunning = false;
@@ -24,20 +26,24 @@ export class Player extends Entity {
 
         this.activeDirections = new Set(); // Store currently pressed directions
         
-        // Jump properties
-        this.jumpVelocity = -900; // Jump strength (negative = upward)
+        // Simplified jump properties
+        this.jumpVelocity = -700; // Base jump strength (negative = upward)
+        this.jumpKeyHeld = false; // Whether jump key is currently being held
+        this.jumpGravity = 1500; // Gravity when jumping and key held (much lighter for high jumps)
+        this.fallGravity = 3000; // Gravity when falling or key released (much heavier for quick tap)
+        this.maxFallSpeed = 800; // Terminal velocity
         
-        // Coyote time properties
-        this.coyoteTime = 0.1; // 100ms grace period after leaving ground
-        this.coyoteTimer = 0; // Current coyote time remaining
+        // Gravity transition properties
+        this.gravityTransitionTime = 0.2; // Time in seconds to transition between gravities
+        this.gravityTransitionTimer = 0; // Current transition timer
         
-        // Animation properties
-        this.animationFrame = 0; // Current animation frame (0-3)
-        this.animationTimer = 0; // Timer for animation
-        this.animationSpeed = 0.15; // Seconds per frame (configurable)
+        // Coyote time (grace period after leaving ground)
+        this.coyoteTime = 0.15; // 150ms grace period
+        this.coyoteTimer = 0;
         
-        // Player is not static (can move)
-        this.isStatic = false;
+        // Enable animation for player with 3 frames
+        this.setAnimationEnabled(true, 3);
+        
     }
 
     /**
@@ -59,6 +65,7 @@ export class Player extends Entity {
                     this.physics.onGround = false; // Player is now airborne
                     this.coyoteTimer = 0; // Use up coyote time
                 }
+                this.jumpKeyHeld = true; // Mark jump key as being held
                 break;
             case 'down':
                 // Down key has no effect in platformer
@@ -79,6 +86,15 @@ export class Player extends Entity {
         }
     }
 
+    /**
+     * Handle jump key release for variable jump height
+     * Call this when the jump key (up/space) is released
+     */
+    onJumpKeyRelease() {
+        this.jumpKeyHeld = false;
+        // Start gravity transition timer when jump key is released
+        this.gravityTransitionTimer = 0;
+    }
     /**
      * Update player position based on velocity
      * @param {number} canvasWidth - Canvas width for boundary checking
@@ -104,16 +120,17 @@ export class Player extends Entity {
             this.coyoteTimer = 0;
         }
         
-        // Check if input directions oppose current velocity (only for horizontal)
+        // Handle horizontal movement and friction
         const hasLeft = this.activeDirections.has('left');
         const hasRight = this.activeDirections.has('right');
-        if(hasLeft || hasRight) {
+        
+        if (hasLeft || hasRight) {
             this.isRunning = true;
         } else {
-            this.isRunning = false; // No horizontal input means not running
+            this.isRunning = false;
         }
 
-        // Check if horizontal input opposes current velocity direction
+        // Check if horizontal input opposes current velocity direction for friction
         let hasValidHorizontalInput = false;
         if (hasLeft || hasRight) {
             if (hasLeft && hasRight) {
@@ -133,51 +150,48 @@ export class Player extends Entity {
         
         // Apply horizontal friction only if no valid horizontal input
         if (!hasValidHorizontalInput) {
-            this.velocity.x *= this.friction;
+            this.velocity.x *= this.frictionX;
         }
         
-        // Always apply gravity
-        this.velocity.y += this.physics.gravity * deltaTime;
+        // Apply gravity - use smooth transitions between different gravity values
+        let currentGravity;
+        if (this.velocity.y < 0) {
+            // Moving upward (jumping) - use lighter gravity when jump key is held
+            if (this.jumpKeyHeld) {
+                currentGravity = this.jumpGravity;
+                // Reset transition timer when key is held
+                this.gravityTransitionTimer = 0;
+            } else {
+                // Jump key released - smoothly transition from light to heavy gravity
+                this.gravityTransitionTimer += deltaTime;
+                const transitionProgress = Math.min(this.gravityTransitionTimer / this.gravityTransitionTime, 1.0);
+                const smoothProgress = Utils.smoothstep(0, 1, transitionProgress);
+                currentGravity = this.jumpGravity + (this.fallGravity - this.jumpGravity) * smoothProgress;
+            }
+        } else {
+            // Moving downward (falling) - use heavy gravity for snappy falls
+            currentGravity = this.fallGravity;
+        }
+        
+        this.velocity.y += currentGravity * deltaTime;
+        
+        // Cap falling speed
+        if (this.velocity.y > this.maxFallSpeed) {
+            this.velocity.y = this.maxFallSpeed;
+        }
+        
+        // Reset jump key held state at end of frame
+        this.jumpKeyHeld = false;
         
         // Clear active directions for next frame
         this.activeDirections.clear();
         
-        // Update animation
-        this.updateAnimation(deltaTime);
+        // Call parent update to handle animation
+        super.update(deltaTime);
         
-        // Calculate intended position
+        // Calculate intended position (don't round here - let collision system handle exact positions)
         this.x = this.x + this.velocity.x * deltaTime;
         this.y = this.y + this.velocity.y * deltaTime;
-    }
-
-    /**
-     * Update animation frame based on timer
-     * @param {number} deltaTime - Time elapsed since last frame in seconds
-     */
-    updateAnimation(deltaTime) {
-        this.animationTimer += deltaTime;
-        
-        // Check if it's time to advance to next frame
-        if (this.animationTimer >= this.animationSpeed) {
-            this.animationFrame = (this.animationFrame + 1) % 3; // Cycle through frames 0-2
-            this.animationTimer = 0; // Reset timer
-        }
-    }
-
-    /**
-     * Set animation speed
-     * @param {number} speed - Seconds per frame
-     */
-    setAnimationSpeed(speed) {
-        this.animationSpeed = speed;
-    }
-
-    /**
-     * Get current animation frame
-     * @returns {number} Current frame (0-3)
-     */
-    getAnimationFrame() {
-        return this.animationFrame;
     }
 
     /**
@@ -214,8 +228,17 @@ export class Player extends Entity {
      * @param {number} y - New y position
      */
     setPosition(x, y) {
+        // Don't round here - let collision system work with exact positions
         this.x = x;
         this.y = y;
+    }
+
+    /**
+     * Round position to avoid fractional pixels (call after collision resolution)
+     */
+    roundPosition() {
+        this.x = Math.round(this.x);
+        this.y = Math.round(this.y);
     }
 
     /**
@@ -224,8 +247,8 @@ export class Player extends Entity {
      * @param {number} y - New y position
      */
     resetToPosition(x, y) {
-        this.x = x;
-        this.y = y;
+        this.x = Math.round(x);
+        this.y = Math.round(y);
         
         // Reset velocity and physics state when resetting position
         this.velocity.x = 0;
@@ -233,6 +256,9 @@ export class Player extends Entity {
         this.physics.onGround = false; // Will be set correctly by collision detection
         this.coyoteTimer = 0; // Reset coyote time
         this.activeDirections.clear(); // Clear any active input directions
+        
+        // Reset jump state
+        this.jumpKeyHeld = false;
         
         console.log(`Player reset to position: (${x}, ${y}), velocity: (${this.velocity.x}, ${this.velocity.y})`);
     }

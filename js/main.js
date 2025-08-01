@@ -36,6 +36,16 @@ function setup() {
     gameView.init();
     gameController.init();
     
+    // Setup debug bounds checkbox listener
+    const debugCheckbox = document.getElementById('debug-bounds-checkbox');
+    if (debugCheckbox) {
+        debugCheckbox.addEventListener('change', function() {
+            gameView.setShowDebugBounds(this.checked);
+        });
+        // Set initial state
+        gameView.setShowDebugBounds(debugCheckbox.checked);
+    }
+    
     console.log('Game setup complete!');
 }
 

@@ -269,8 +269,26 @@ export class GameModel {
         // Update player physics
         this.player.update(deltaTime);
         
+        // Update all coins for animation
+        for (const coin of this.coins) {
+            coin.update(deltaTime);
+        }
+        
+        // Update all enemies
+        for (const enemy of this.enemies) {
+            enemy.update(deltaTime);
+        }
+        
+        // Update all frozen clones
+        for (const frozenClone of this.frozenClones) {
+            frozenClone.update(deltaTime);
+        }
+        
         // Check collisions
         this.collisionEngine.checkCollisions();
+        
+        // Round player position to avoid fractional pixels after collision resolution
+        this.player.roundPosition();
         
         // Check if level is completed (all coins collected)
         this.checkLevelCompletion();

@@ -6,7 +6,6 @@ export class Platform extends Entity {
         super(x, y, width, height);
         
         // Platform-specific properties
-        this.isStatic = true; // Mark as static entity (override base class default)
     }
 
     /**

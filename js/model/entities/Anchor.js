@@ -6,7 +6,6 @@ export class Anchor extends Entity {
         super(x, y, width, height);
         
         // Anchor-specific properties
-        this.isStatic = true; // Mark as static entity
         this.isAnchor = true; // Special flag to identify anchors
         this.color = { r: 128, g: 128, b: 128 }; // Grey color
     }
