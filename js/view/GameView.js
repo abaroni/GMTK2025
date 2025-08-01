@@ -8,7 +8,7 @@ export class GameView {
         this.gameModel = gameModel;
         this.canvas = null;
         this.spriteSheet = null;
-        
+        this.newSpriteSheet = null; // Placeholder for new sprite sheet if needed
         // Initialize camera with canvas dimensions
         const canvasDimensions = this.gameModel.getCanvasDimensions();
         this.camera = new Camera(canvasDimensions.width, canvasDimensions.height);
@@ -24,7 +24,7 @@ export class GameView {
         this.canvas.parent('game-container');
         
         this.spriteSheet = loadImage('assets/ssheetT.png');
-
+        this.newSpriteSheet = loadImage('assets/BunSpriteSheet.png'); 
         // Initialize camera to follow the player
         this.camera.init(this.gameModel.getPlayer());
 
@@ -37,7 +37,6 @@ export class GameView {
     render() {
         // Update camera to follow the player
         this.camera.followTarget(this.gameModel.getPlayer());
-        
         // Draw background BEFORE camera translation so it can have its own parallax movement
         this.drawBackground();
         
@@ -48,7 +47,7 @@ export class GameView {
         this.drawPlayer();
         this.drawCoins();
         this.drawEnemies();
-        this.drawDebugBounds();
+        //this.drawDebugBounds();
         this.drawUI();
     }
 
@@ -115,11 +114,11 @@ export class GameView {
             const spriteY = 16; // Y coordinate for the player sprite rowd
             
             // Set blue tint for frozen clones
-            tint(100, 100, 255, 200); // Light blue with some transparency
+            //tint(100, 100, 255, 200); // Light blue with some transparency
             // Draw the animated sprite
-            image(this.spriteSheet, position.x - 12, position.y - 12, this.gameModel.player.getSize(), this.gameModel.player.getSize(), spriteX, spriteY, 16, 16);
+            image(this.newSpriteSheet, position.x - 12, position.y - 12, this.gameModel.player.getSize(), this.gameModel.player.getSize(), 16*4, 16*7, 16, 16);
             // Reset tint for other drawings
-            noTint();
+            //noTint();
         }
     }
 
@@ -151,11 +150,28 @@ export class GameView {
         
         // Calculate sprite sheet coordinates for each frame
         const frameXPositions = [16, 32, 48, 64]; // X coordinates for frames 0-3
-        const spriteX = frameXPositions[frame];
-        const spriteY = 16; // Y coordinate for the player sprite rowd
+        let spriteX = null;
+        let spriteY = null;
         
+        let destinationX = position.x ; // Center player on x
+        let destinationY = position.y ; // Center player on y
         // Draw the animated sprite
-        image(this.spriteSheet, position.x, position.y, player.getSize(), player.getSize(), spriteX, spriteY, 16, 16);
+        // image(this.spriteSheet, position.x, position.y, player.getSize(), player.getSize(), spriteX, spriteY, 16, 16);
+        push();
+        if( player.facingDirection === 'left') {
+            scale(-1, 1);
+            destinationX = -destinationX - player.getSize(); // Flip horizontally
+        }
+
+        if(player.physics.onGround){
+            spriteX = player.isRunning? frameXPositions[frame] : frameXPositions[0];
+            spriteY = 16*6;
+        }else{
+            spriteX = frameXPositions[frame];
+            spriteY = 16*7;
+        }
+        image(this.newSpriteSheet,  destinationX, destinationY, player.getSize(), player.getSize(), spriteX, spriteY, 16, 16);
+        pop();
     }
     drawCoins() {
         const coins = this.gameModel.getCoins();

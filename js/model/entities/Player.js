@@ -15,6 +15,8 @@ export class Player extends Entity {
         this.acceleration = 500; // How quickly player reaches max speed
         this.friction = 0.85; // Velocity decay when no input (per frame)
         this.color = { r: 0, g: 255, b: 0 }; // Green color
+        this.facingDirection = 'right'; 
+        this.isRunning = false;
         
         // Override the default bounds with custom player bounds
         this.bounds = new Bounds(this.size - 24, this.size - 12, 12, 12); // Initialize bounds with player size
@@ -63,9 +65,11 @@ export class Player extends Entity {
                 break;
             case 'left':
                 this.velocity.x -= accelerationAmount;
+                this.facingDirection = 'left'; 
                 break;
             case 'right':
                 this.velocity.x += accelerationAmount;
+                this.facingDirection = 'right';
                 break;
         }
         
@@ -103,7 +107,12 @@ export class Player extends Entity {
         // Check if input directions oppose current velocity (only for horizontal)
         const hasLeft = this.activeDirections.has('left');
         const hasRight = this.activeDirections.has('right');
-        
+        if(hasLeft || hasRight) {
+            this.isRunning = true;
+        } else {
+            this.isRunning = false; // No horizontal input means not running
+        }
+
         // Check if horizontal input opposes current velocity direction
         let hasValidHorizontalInput = false;
         if (hasLeft || hasRight) {
@@ -150,7 +159,7 @@ export class Player extends Entity {
         
         // Check if it's time to advance to next frame
         if (this.animationTimer >= this.animationSpeed) {
-            this.animationFrame = (this.animationFrame + 1) % 4; // Cycle through frames 0-3
+            this.animationFrame = (this.animationFrame + 1) % 3; // Cycle through frames 0-2
             this.animationTimer = 0; // Reset timer
         }
     }
