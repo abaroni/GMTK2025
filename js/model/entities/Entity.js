@@ -20,6 +20,7 @@ export class Entity {
         this.animationSpeed = 0.15; // Seconds per frame (configurable)
         this.maxAnimationFrames = 3; // Maximum number of animation frames (0-2)
         this.animationEnabled = false; // Whether this entity should animate
+        this.animationLoopCallback = null; // Callback when animation loops (optional)
         
         // Custom animation properties
         this.customAnimation = null; // Current custom animation object
@@ -96,6 +97,10 @@ export class Entity {
         if (this.animationTimer >= this.animationSpeed) {
             this.animationFrame = (this.animationFrame + 1) % this.maxAnimationFrames;
             this.animationTimer = 0; // Reset timer
+            // If we reached the last frame, call loop callback if set
+            if (this.animationFrame === 0 && this.animationLoopCallback) {
+                this.animationLoopCallback();
+            }
         }
     }
 

@@ -9,12 +9,27 @@ export class FrozenClone extends Entity {
         this.bounds = new Bounds(this.size - 24, this.size - 12, 12, 12); 
         
         // FrozenClone-specific properties
+
+        
+        this.animationSpeed = 0.10;
+        this.vfxAlpha = 0;
+        setTimeout(() => {
+            this.vfxAlpha = 255;
+            this.setAnimationEnabled(true, 3);
+        }, 150); // Start animation after 1 second
+        
+        this.animationLoopCallback = () => {
+            // Callback when animation loop completes
+             this.vfxAlpha = 0; // Alpha for visual effects, can be adjusted
+            this.setAnimationEnabled(false); // Disable animation after loop
+        }
     }
 
     /**
-     * FrozenClones don't need to update - they're static
+     * Update frozen clone (needs to call parent for animation)
      */
-    update() {
-        // Static entities don't update
+    update(deltaTime) {
+        // Call parent update to handle animation
+        super.update(deltaTime);
     }
 }

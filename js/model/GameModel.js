@@ -6,6 +6,7 @@ import { FrozenClone } from './entities/FrozenClone.js';
 import { Anchor } from './entities/Anchor.js';
 import { CollisionEngine } from './CollisionEngine.js';
 import { LevelParser } from './LevelParser.js';
+import { LevelDefinitions } from './LevelDefinitions.js';
 /**
  * Game Model - Manages the overall game state and entities
  */
@@ -13,6 +14,16 @@ export class GameModel {
     constructor() {
         this.canvasWidth = 800;
         this.canvasHeight = 600;
+        
+        // Viewport culling information
+        this.viewport = {
+            left: 0,
+            right: this.canvasWidth,
+            top: 0,
+            bottom: this.canvasHeight,
+            buffer: 150 // Extra pixels around visible area to handle partially visible entities
+        };
+        
         this.player = new Player();
         this.coins = [];
         this.totalCoins = 0; // Total coins in the level
@@ -24,7 +35,12 @@ export class GameModel {
         this.collisionEngine = new CollisionEngine();
         this.score = 0;
         this.levelParser = new LevelParser();
+        this.levelDefinitions = new LevelDefinitions(this.levelParser);
         this.isLevelCompleting = false; // Flag to prevent multiple completion triggers
+        
+        // Multi-level system
+        this.currentLevel = 1;
+        this.maxLevel = this.levelDefinitions.getMaxLevel();
         
         // Place action cooldown
         this.placeCooldown = 0;
@@ -35,10 +51,25 @@ export class GameModel {
      * Initialize the game
      */
     init() {
-        // Load the default level with collision handlers
-        this.loadLevel(null, true);
+        // Load the current level with collision handlers
+        this.loadCurrentLevel(true);
 
         this.totalCoins = this.coins.length; // Set total coins for level completion tracking
+    }
+
+    /**
+     * Load the current level
+     * @param {boolean} setupHandlers - Whether to setup collision handlers (default: true)
+     */
+    loadCurrentLevel(setupHandlers = true) {
+        const levelString = this.levelDefinitions.getLevel(this.currentLevel);
+        if (!levelString) {
+            console.error(`Level ${this.currentLevel} not found!`);
+            return;
+        }
+        
+        console.log(`Loading Level ${this.currentLevel}...`);
+        this.loadLevel(levelString, setupHandlers);
     }
 
     /**
@@ -175,40 +206,112 @@ export class GameModel {
     }
 
     /**
-     * Check if level is completed (all coins collected) and reset if so
+     * Check if level is completed (all coins collected) and progress to next level or reset
      */
     checkLevelCompletion() {
         if (this.coins.length === 0 && this.totalCoins > 0 && !this.isLevelCompleting) {
             this.isLevelCompleting = true; // Prevent multiple triggers
-            console.log('Level completed! All coins collected. Resetting level...');
             
-            // Add a small delay before resetting to let the player see completion
-            setTimeout(() => {
-                this.resetLevel();
-            }, 1000); // 1 second delay
+            if (this.currentLevel < this.maxLevel) {
+                // Progress to next level
+                console.log(`Level ${this.currentLevel} completed! Progressing to Level ${this.currentLevel + 1}...`);
+                
+                // Add a delay before progressing to let the player see completion
+                setTimeout(() => {
+                    this.nextLevel();
+                }, 1500); // 1.5 second delay
+            } else {
+                // All levels completed - show completion message and restart from level 1
+                console.log('🎉 Congratulations! All levels completed! 🎉');
+                console.log('Restarting from Level 1...');
+                
+                setTimeout(() => {
+                    this.restartGame();
+                }, 2000); // 2 second delay to show completion
+            }
         }
+    }
+
+    /**
+     * Progress to the next level
+     */
+    nextLevel() {
+        if (this.currentLevel < this.maxLevel) {
+            this.currentLevel++;
+            console.log(`Starting Level ${this.currentLevel}...`);
+            
+            // Temporarily pause collision detection during level transition
+            const wasRunning = this.isGameRunning;
+            this.isGameRunning = false;
+            
+            // Load the new level without setting up collision handlers again
+            this.loadCurrentLevel(false);
+            
+            // Update total coins for the new level
+            this.totalCoins = this.coins.length;
+            
+            // Reset completion flag
+            this.isLevelCompleting = false;
+            
+            // Resume game after a brief pause
+            setTimeout(() => {
+                this.isGameRunning = wasRunning;
+            }, 100); // 100ms pause
+            
+            console.log(`Level ${this.currentLevel} loaded! Coins to collect: ${this.totalCoins}, Score: ${this.score}`);
+        }
+    }
+
+    /**
+     * Restart the game from level 1
+     */
+    restartGame() {
+        console.log('Restarting game from Level 1...');
+        
+        // Reset to level 1
+        this.currentLevel = 1;
+        
+        // Reset score
+        this.score = 0;
+        
+        // Temporarily pause collision detection during restart
+        const wasRunning = this.isGameRunning;
+        this.isGameRunning = false;
+        
+        // Load level 1 without setting up collision handlers again
+        this.loadCurrentLevel(false);
+        
+        // Update total coins for level 1
+        this.totalCoins = this.coins.length;
+        
+        // Reset completion flag
+        this.isLevelCompleting = false;
+        
+        // Resume game after a brief pause
+        setTimeout(() => {
+            this.isGameRunning = wasRunning;
+        }, 100); // 100ms pause
+        
+        console.log(`Game restarted! Level 1 loaded, Score reset to: ${this.score}`);
     }
 
     /**
      * Reset the current level to its initial state
      */
     resetLevel() {
-        console.log('Resetting level...');
+        console.log(`Resetting Level ${this.currentLevel}...`);
         
         // Temporarily pause collision detection to prevent jiggling during reset
         const wasRunning = this.isGameRunning;
         this.isGameRunning = false;
         
-        // Reload the level without setting up collision handlers again
-        this.loadLevel(null, false);
+        // Reload the current level without setting up collision handlers again
+        this.loadCurrentLevel(false);
         
         // Update total coins for the reset level
         this.totalCoins = this.coins.length;
         
-        // Reset score to 0
-        this.score = 0;
-        
-        // Reset completion flag
+        // Reset completion flag but keep current score and level
         this.isLevelCompleting = false;
         
         // Resume game after a brief pause to allow everything to settle
@@ -216,7 +319,7 @@ export class GameModel {
             this.isGameRunning = wasRunning;
         }, 50); // 50ms pause
         
-        console.log(`Level reset! Score reset to: ${this.score}, player at: (${this.player.x}, ${this.player.y})`);
+        console.log(`Level ${this.currentLevel} reset! Player at: (${this.player.x}, ${this.player.y}), Score: ${this.score}`);
     }
 
     /**
@@ -381,6 +484,40 @@ export class GameModel {
     }
 
     /**
+     * Update viewport bounds for culling based on camera offset
+     * @param {number} cameraOffsetX - Camera X offset
+     * @param {number} cameraOffsetY - Camera Y offset
+     */
+    updateViewport(cameraOffsetX, cameraOffsetY) {
+        this.viewport.left = -cameraOffsetX - this.viewport.buffer;
+        this.viewport.right = -cameraOffsetX + this.canvasWidth + this.viewport.buffer;
+        this.viewport.top = -cameraOffsetY - this.viewport.buffer;
+        this.viewport.bottom = -cameraOffsetY + this.canvasHeight + this.viewport.buffer;
+    }
+
+    /**
+     * Get current viewport bounds for culling
+     * @returns {Object} Viewport bounds {left, right, top, bottom, buffer}
+     */
+    getViewport() {
+        return this.viewport;
+    }
+
+    /**
+     * Check if an entity is within the viewport (for culling)
+     * @param {Object} entity - Entity with x, y, width, height properties
+     * @returns {boolean} True if entity intersects with viewport
+     */
+    isEntityInViewport(entity) {
+        return (
+            entity.x < this.viewport.right &&
+            entity.x + entity.width > this.viewport.left &&
+            entity.y < this.viewport.bottom &&
+            entity.y + entity.height > this.viewport.top
+        );
+    }
+
+    /**
      * Check and log if player is intersecting with any entities
      * @returns {Array} Array of entity types the player is intersecting with
      */
@@ -491,6 +628,22 @@ export class GameModel {
      */
     getPlaceCooldown() {
         return this.placeCooldown;
+    }
+
+    /**
+     * Get current level number
+     * @returns {number} Current level number
+     */
+    getCurrentLevel() {
+        return this.currentLevel;
+    }
+
+    /**
+     * Get maximum level number
+     * @returns {number} Maximum level number
+     */
+    getMaxLevel() {
+        return this.maxLevel;
     }
 
     /**

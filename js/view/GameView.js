@@ -10,6 +10,7 @@ export class GameView {
         this.canvas = null;
         this.spriteSheet = null;
         this.newSpriteSheet = null; // Placeholder for new sprite sheet if needed
+        this.backgroundColor = "#000000"; // Default background color
         // Initialize camera with canvas dimensions
         const canvasDimensions = this.gameModel.getCanvasDimensions();
         this.camera = new Camera(canvasDimensions.width, canvasDimensions.height);
@@ -36,8 +37,8 @@ export class GameView {
         this.canvas = createCanvas(canvasDimensions.width, canvasDimensions.height);
         this.canvas.parent('game-container');
         
-        this.spriteSheet = loadImage('assets/ssheetT.png');
-        this.newSpriteSheet = loadImage('assets/BunSpriteSheet.png'); 
+        //this.spriteSheet = loadImage('assets/ssheetT.png');
+        this.newSpriteSheet = loadImage('assets/BunSpriteSheet2.png'); 
         
         // Initialize platform renderer with tile sheet and matching tile size
         this.platformRenderer = new PlatformRenderer(this.newSpriteSheet, 50);
@@ -57,6 +58,11 @@ export class GameView {
         
         // Update camera to follow the player
         this.camera.followTarget(this.gameModel.getPlayer());
+        
+        // Update viewport bounds for culling based on camera position
+        const cameraOffset = this.camera.getOffset();
+        this.gameModel.updateViewport(cameraOffset.x, cameraOffset.y);
+        
         // Draw background BEFORE camera translation so it can have its own parallax movement
         this.drawBackground();
         
@@ -96,12 +102,12 @@ export class GameView {
      * Draw the background
      */
     drawBackground() {
-        background("#232836");
+        background(this.backgroundColor);
         
         // Draw parallax layers - furthest to nearest (more visible speeds for testing)
-        this.drawParallaxLayer(0.1, 200, 250, 100, 0, color( "#0B0B0F")); // Far mountains - slow but visible
-        this.drawParallaxLayer(0.2, 100, 225, 75, 0, color("#14141C")); // Mid mountains
-        this.drawParallaxLayer(0.3, 150, 200, 50, 0, color("#1E1F2B")); // Near hills - medium speed
+        //this.drawParallaxLayer(0.1, 200, 250, 100, 0, color( "#0B0B0F")); // Far mountains - slow but visible
+        //this.drawParallaxLayer(0.2, 100, 225, 75, 0, color("#14141C")); // Mid mountains
+        //this.drawParallaxLayer(0.3, 150, 200, 50, 0, color("#1E1F2B")); // Near hills - medium speed
         //this.drawParallaxLayer(0.7, 100, 100, 50, 50, color(100, 150, 255, 255)); // Foreground elements
     }
 
@@ -141,24 +147,30 @@ export class GameView {
             rect(rectX, rectY, width, height);
         }
     }
-
+    
     drawFrozenClones() {
         const frozenClones = this.gameModel.frozenClones;
         for (const clone of frozenClones) {
-            // Draw frozen clone as a player frame with a blue tint
-            const position = clone.getPosition();
-           
-            // Calculate sprite sheet coordinates for each frame
-            const frameXPositions = [16, 32, 48, 64]; // X coordinates for frames 0-3
-            const spriteX = frameXPositions[0];
-            const spriteY = 16; // Y coordinate for the player sprite rowd
-            
-            // Set blue tint for frozen clones
-            //tint(100, 100, 255, 200); // Light blue with some transparency
-            // Draw the animated sprite
-            image(this.newSpriteSheet, position.x , position.y , this.gameModel.player.getSize(), this.gameModel.player.getSize(), 16*4, 16*7, 16, 16);
-            // Reset tint for other drawings
-            //noTint();
+            // Check if frozen clone is within viewport before rendering
+            if (this.gameModel.isEntityInViewport(clone)) {
+                // Draw frozen clone as a player frame with a blue tint
+                const position = clone.getPosition();
+               
+                const frame = clone.getAnimationFrame();
+                const frameXPositions = [16, 32, 48]; // X coordinates for frames 0-2
+                const spriteX = frameXPositions[frame];
+                const spriteY = 16*4; // Y coordinate for the player sprite rowd
+                
+                // Set blue tint for frozen clones
+                // Draw the animated sprite
+                image(this.newSpriteSheet, position.x , position.y , this.gameModel.player.getSize(), this.gameModel.player.getSize(), 16*4, 16*7, 16, 16);
+                
+                tint(255, clone.vfxAlpha)
+                image(this.newSpriteSheet, position.x , position.y, this.gameModel.player.getSize(), this.gameModel.player.getSize(), spriteX, 16*3, 16, 16);
+                
+                // Reset tint for other drawings
+                noTint();
+            }
         }
     }
 
@@ -168,8 +180,11 @@ export class GameView {
     drawPlatforms() {
         const platforms = this.gameModel.getPlatforms();
         for (const platform of platforms) {
-            // Use tile-based platform renderer with all platforms for adjacency checking
-            this.platformRenderer.drawPlatform(platform, platforms);
+            // Check if platform is within viewport before rendering
+            if (this.gameModel.isEntityInViewport(platform)) {
+                // Use tile-based platform renderer with all platforms for adjacency checking
+                this.platformRenderer.drawPlatform(platform, platforms);
+            }
         }
     }
 
@@ -213,51 +228,56 @@ export class GameView {
     drawCoins() {
         const coins = this.gameModel.getCoins();
         for (const coin of coins) {
-            const position = { x: coin.x, y: coin.y };
-            const size = coin.size;
+            // Check if coin is within viewport before rendering
+            if (this.gameModel.isEntityInViewport(coin)) {
+                const position = { x: coin.x, y: coin.y };
+                const size = coin.size;
 
-            const frame = coin.getAnimationFrame();
-            if (coin.isPlayingCustomAnimation) {                
-                const spriteX = 16*3;
-                const spriteY = 16*4; // Y coordinate for the player sprite rowd
-                
-                // Set blue tint for frozen clones
-                //tint(100, 100, 255, 200); // Light blue with some transparency
-                // Draw the animated sprite
-                image(this.newSpriteSheet, position.x , position.y , size, size, spriteX, spriteY, 16, 16);
-            }else{
-                // Calculate sprite sheet coordinates for each frame
-                const frameXPositions = [16, 32, 48]; // X coordinates for frames 0-2
-                const spriteX = frameXPositions[frame];
-                const spriteY = 16*4; // Y coordinate for the player sprite rowd
-                
-                // Set blue tint for frozen clones
-                //tint(100, 100, 255, 200); // Light blue with some transparency
-                // Draw the animated sprite
-                image(this.newSpriteSheet, position.x , position.y , size, size, spriteX, spriteY, 16, 16);
+                const frame = coin.getAnimationFrame();
+                if (coin.isPlayingCustomAnimation) {                
+                    const spriteX = 16*3;
+                    const spriteY = 16*4; // Y coordinate for the player sprite rowd
+                    
+                    // Set blue tint for frozen clones
+                    //tint(100, 100, 255, 200); // Light blue with some transparency
+                    // Draw the animated sprite
+                    image(this.newSpriteSheet, position.x , position.y , size, size, spriteX, spriteY, 16, 16);
+                }else{
+                    // Calculate sprite sheet coordinates for each frame
+                    const frameXPositions = [16, 32, 48]; // X coordinates for frames 0-2
+                    const spriteX = frameXPositions[frame];
+                    const spriteY = 16*4; // Y coordinate for the player sprite rowd
+                    
+                    // Set blue tint for frozen clones
+                    //tint(100, 100, 255, 200); // Light blue with some transparency
+                    // Draw the animated sprite
+                    image(this.newSpriteSheet, position.x , position.y , size, size, spriteX, spriteY, 16, 16);
+                }
             }
-
         }
     }
     drawEnemies() {
         const enemies = this.gameModel.getEnemies();
         for (const enemy of enemies) {
-            const position = { x: enemy.x, y: enemy.y };
-            const size = enemy.size;
+            // Check if enemy is within viewport before rendering
+            if (this.gameModel.isEntityInViewport(enemy)) {
+                const position = { x: enemy.x, y: enemy.y };
+                const size = enemy.size;
 
-            // Draw the enemy as a star
-            fill(255, 0, 0); // Red color
-            stroke(0);
-            strokeWeight(1);
-            beginShape();
-            for (let i = 0; i < 10; i++) {
-                const angle = TWO_PI / 10 * i - HALF_PI; // 10 points for star (5 outer + 5 inner)
-                const radius = (i % 2 === 0) ? size / 2 : size / 4; // Alternate between outer and inner radius
-                const x = position.x + size / 2 + cos(angle) * radius;
-                const y = position.y + size / 2 + sin(angle) * radius;
-                vertex(x, y);
+                // Draw the enemy as a star
+                fill(255, 0, 0); // Red color
+                stroke(0);
+                strokeWeight(1);
+                beginShape();
+                for (let i = 0; i < 10; i++) {
+                    const angle = TWO_PI / 10 * i - HALF_PI; // 10 points for star (5 outer + 5 inner)
+                    const radius = (i % 2 === 0) ? size / 2 : size / 4; // Alternate between outer and inner radius
+                    const x = position.x + size / 2 + cos(angle) * radius;
+                    const y = position.y + size / 2 + sin(angle) * radius;
+                    vertex(x, y);
+                }
+                endShape(CLOSE);
             }
-            endShape(CLOSE);
         }
     }
 
@@ -299,6 +319,21 @@ export class GameView {
         } else {
             text(`Place: Ready`, offsetX, debugY);
         }
+        debugY += 15;
+        
+        // Draw viewport info
+        const viewport = this.gameModel.getViewport();
+        text(`Viewport: L:${viewport.left.toFixed(0)} R:${viewport.right.toFixed(0)} T:${viewport.top.toFixed(0)} B:${viewport.bottom.toFixed(0)}`, offsetX, debugY);
+        debugY += 15;
+        
+        // Count visible entities for culling debug info
+        const totalEntities = this.gameModel.getPlatforms().length + this.gameModel.getCoins().length + 
+                             this.gameModel.getEnemies().length + this.gameModel.getFrozenClones().length;
+        const visibleEntities = this.gameModel.getPlatforms().filter(p => this.gameModel.isEntityInViewport(p)).length +
+                               this.gameModel.getCoins().filter(c => this.gameModel.isEntityInViewport(c)).length +
+                               this.gameModel.getEnemies().filter(e => this.gameModel.isEntityInViewport(e)).length +
+                               this.gameModel.getFrozenClones().filter(f => this.gameModel.isEntityInViewport(f)).length;
+        text(`Entities: ${visibleEntities}/${totalEntities} visible (${((1 - visibleEntities/totalEntities) * 100).toFixed(1)}% culled)`, offsetX, debugY);
 
         // Set light gray color for debug bounds
         stroke(180, 180, 180); // Light gray
@@ -322,7 +357,7 @@ export class GameView {
         // Draw coin bounds and positions
         const coins = this.gameModel.getCoins();
         for (const coin of coins) {
-            if (coin.bounds) {
+            if (coin.bounds && this.gameModel.isEntityInViewport(coin)) {
                 // Draw bounds
                 stroke(180, 180, 180);
                 strokeWeight(1);
@@ -341,7 +376,7 @@ export class GameView {
         // Draw enemy bounds and positions
         const enemies = this.gameModel.getEnemies();
         for (const enemy of enemies) {
-            if (enemy.bounds) {
+            if (enemy.bounds && this.gameModel.isEntityInViewport(enemy)) {
                 // Draw bounds
                 stroke(180, 180, 180);
                 strokeWeight(1);
@@ -360,7 +395,7 @@ export class GameView {
         // Draw platform bounds and positions
         const platforms = this.gameModel.getPlatforms();
         for (const platform of platforms) {
-            if (platform.bounds) {
+            if (platform.bounds && this.gameModel.isEntityInViewport(platform)) {
                 // Draw bounds
                 stroke(240, 230, 230);
                 strokeWeight(1);
@@ -379,7 +414,7 @@ export class GameView {
         // Draw frozen clone bounds and positions
         const frozenClones = this.gameModel.frozenClones;
         for (const clone of frozenClones) {
-            if (clone.bounds) {
+            if (clone.bounds && this.gameModel.isEntityInViewport(clone)) {
                 // Draw bounds
                 stroke(0, 0, 255,128);
                 strokeWeight(1);
@@ -447,7 +482,7 @@ export class GameView {
      * Draw UI elements (score, instructions, etc.)
      */
     drawUI() {
-        // Draw score
+        // Draw score and level
         fill(color(255, 255, 255,128)); // Set text color to white
         noStroke();
         textAlign(LEFT);
@@ -457,8 +492,12 @@ export class GameView {
         const cameraOffset = this.camera.getOffset();
         const offsetX = 10 - cameraOffset.x;
         const offsetY = 25 - cameraOffset.y;
-        text(`Score: ${this.gameModel.getScore()} / ${this.gameModel.getTotalCoins() * 10}`, offsetX, offsetY);
-
+        
+        // Draw level info
+        text(`Loop: ${this.gameModel.getCurrentLevel()}/${this.gameModel.getMaxLevel()}`, offsetX, offsetY);
+        
+        // Draw score
+        text(`Score: ${this.gameModel.getScore()} / ${this.gameModel.getTotalCoins() * 10}`, offsetX, offsetY + 20);
 
         // Draw controls info
         fill(color(255, 255, 255,128)); // Set text color to white
@@ -466,7 +505,6 @@ export class GameView {
         textSize(12);
         text('Use arrow keys or WASD to move, space to place a frozen clone', offsetX + width - 20, this.gameModel.canvasHeight - 10 - cameraOffset.y);
         
-
         // Draw game status
         if (!this.gameModel.isRunning()) {
             fill(255, 0, 0);

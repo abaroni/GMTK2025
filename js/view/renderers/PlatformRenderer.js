@@ -12,26 +12,26 @@ export class PlatformRenderer {
             SINGLE: { x: 0, y: 0 },
             
             // Horizontal line tiles
-            LEFT_EDGE: { x: 16*12, y: 16*0 },     // Left end of horizontal line
-            MIDDLE: { x: 16*13, y: 16*0 },        // Middle section
-            RIGHT_EDGE: {  x: 16*14, y: 16*0 },    // Right end of horizontal line
+            LEFT_EDGE: { x: 16*14, y: 16*0 },     // Left end of horizontal line
+            MIDDLE: { x: 16*15, y: 16*0 },        // Middle section
+            RIGHT_EDGE: {  x: 16*16, y: 16*0 },    // Right end of horizontal line
             
             // Vertical line tiles
-            TOP_CAP: { x: 16*12, y: 16*1 },       // Top end of vertical line
-            VERTICAL_MIDDLE: { x: 16*13, y: 16*1 }, // Middle of vertical line
-            BOTTOM_CAP: { x: 16*14, y: 16*1 },    // Bottom end of vertical line
+            TOP_CAP: { x: 16*14, y: 16*1 },       // Top end of vertical line
+            VERTICAL_MIDDLE: { x: 16*15, y: 16*1 }, // Middle of vertical line
+            BOTTOM_CAP: { x: 16*16, y: 16*1 },    // Bottom end of vertical line
             
             // Rectangle corner tiles
-            TOP_LEFT: { x: 16*5, y: 16*1 },      // Top-left corner
-            TOP_RIGHT: { x: 16*4, y: 16*1 },    // Top-right corner
-            BOTTOM_LEFT: { x: 16*5, y: 16*0 },  // Bottom-left corner
-            BOTTOM_RIGHT: { x: 16*4, y: 16*0 }, // Bottom-right corner
+            TOP_LEFT: { x: 16*11, y: 16*1 },      // Top-left corner
+            TOP_RIGHT: { x: 16*10, y: 16*1 },    // Top-right corner
+            BOTTOM_LEFT: { x: 16*11, y: 16*0 },  // Bottom-left corner
+            BOTTOM_RIGHT: { x: 16*10, y: 16*0 }, // Bottom-right corner
             
             // Rectangle edge tiles
-            TOP_EDGE: { x: 16*1, y: 16*1 },      // Top edge (middle)
-            BOTTOM_EDGE: { x: 16*0, y: 16*0 },  // Bottom edge (middle)
-            LEFT_SIDE: { x: 16*1, y: 16*0 },    // Left edge (middle)
-            RIGHT_SIDE: { x: 16*0, y: 16*1 },   // Right edge (middle)
+            TOP_EDGE: { x: 16*7, y: 16*1 },      // Top edge (middle)
+            BOTTOM_EDGE: { x: 16*6, y: 16*0 },  // Bottom edge (middle)
+            LEFT_SIDE: { x: 16*7, y: 16*0 },    // Left edge (middle)
+            RIGHT_SIDE: { x: 16*6, y: 16*1 },   // Right edge (middle)
             
             // Fill tile for interior
             FILL: {x: 16*13, y: 16*2 }           // Interior fill
@@ -52,6 +52,8 @@ export class PlatformRenderer {
             for (let tileX = 0; tileX < tilesX; tileX++) {
                 const worldX = platform.x + tileX * this.tileSize;
                 const worldY = platform.y + tileY * this.tileSize;
+
+                
                 
                 const tileType = this.getTileType(worldX, worldY, allPlatforms);
                 const sprite = this.tileSprites[tileType];
