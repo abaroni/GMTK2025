@@ -496,14 +496,29 @@ export class GameView {
         // Draw level info
         text(`Loop: ${this.gameModel.getCurrentLevel()}/${this.gameModel.getMaxLevel()}`, offsetX, offsetY);
         
-        // Draw score
+        // Draw score with cooldown color transition
+        const placeCooldown = this.gameModel.getPlaceCooldown ? this.gameModel.getPlaceCooldown() : 0;
+        const totalCooldownTime = this.gameModel.getPlaceCooldownTime ? this.gameModel.getPlaceCooldownTime() : 1000;
+        
+        const defaultColor = color(255, 255, 255, 128);
+        if (placeCooldown > 0) {
+            // 0 = just started cooldown, 1 = cooldown finished
+            const cooldownProgress = 1 - (placeCooldown / totalCooldownTime); 
+            const startColor = color(0, 0, 255, 128);
+            const interpolatedColor = lerpColor(startColor, defaultColor, cooldownProgress);
+            fill(interpolatedColor);
+        } else {
+            // Default white color when no cooldown
+            fill(defaultColor);
+        }
+        
         text(`Snowflakes: ${this.gameModel.getScore()} / ${this.gameModel.getTotalCoins() }`, offsetX, offsetY + 20);
 
         // Draw controls info
         fill(color(255, 255, 255,128)); // Set text color to white
         textAlign(RIGHT);
         textSize(12);
-        text('Use arrow keys or WASD to move, space to place a frozen clone', offsetX + width - 20, this.gameModel.canvasHeight - 10 - cameraOffset.y);
+        text('Use arrow keys or WASD to move, space to place a frozen clone, Q to delete the older clone, R to restart the current loop', offsetX + width - 20, this.gameModel.canvasHeight - 10 - cameraOffset.y);
         
         // Draw game status
         if (!this.gameModel.isRunning()) {

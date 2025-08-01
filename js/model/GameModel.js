@@ -60,8 +60,9 @@ export class GameModel {
     /**
      * Load the current level
      * @param {boolean} setupHandlers - Whether to setup collision handlers (default: true)
+     * @param {boolean} preserveClones - Whether to preserve existing frozen clones (default: false)
      */
-    loadCurrentLevel(setupHandlers = true) {
+    loadCurrentLevel(setupHandlers = true, preserveClones = false) {
         const levelString = this.levelDefinitions.getLevel(this.currentLevel);
         if (!levelString) {
             console.error(`Level ${this.currentLevel} not found!`);
@@ -69,22 +70,26 @@ export class GameModel {
         }
         
         console.log(`Loading Level ${this.currentLevel}...`);
-        this.loadLevel(levelString, setupHandlers);
+        this.loadLevel(levelString, setupHandlers, preserveClones);
     }
 
     /**
      * Load a level from a level string
      * @param {string} levelString - Optional level string, uses default if not provided
      * @param {boolean} setupHandlers - Whether to setup collision handlers (default: true)
+     * @param {boolean} preserveClones - Whether to preserve existing frozen clones (default: false)
      */
-    loadLevel(levelString = null, setupHandlers = true) {
+    loadLevel(levelString = null, setupHandlers = true, preserveClones = false) {
         // Parse the level
         const entities = this.levelParser.parseLevel(
             levelString || this.levelParser.getDefaultLevel()
         );
 
-        // Clear existing entities
-        this.clearLevel();
+        // Store existing clones if they should be preserved
+        const existingClones = preserveClones ? [...this.frozenClones] : [];
+
+        // Clear existing entities (this will clear clones unless we preserve them)
+        this.clearLevel(preserveClones);
 
         // Create game entities from parsed data
         
@@ -179,8 +184,9 @@ export class GameModel {
 
     /**
      * Clear all entities from the current level
+     * @param {boolean} preserveClones - Whether to preserve existing frozen clones (default: false)
      */
-    clearLevel() {
+    clearLevel(preserveClones = false) {
         // Unregister non-player entities from collision engine
         for (const coin of this.coins) {
             this.collisionEngine.unregister(coin);
@@ -191,17 +197,23 @@ export class GameModel {
         for (const platform of this.platforms) {
             this.collisionEngine.unregister(platform);
         }
-        for (const frozenClone of this.frozenClones) {
-            this.collisionEngine.unregister(frozenClone);
+        
+        // Only unregister and clear clones if not preserving them
+        if (!preserveClones) {
+            for (const frozenClone of this.frozenClones) {
+                this.collisionEngine.unregister(frozenClone);
+            }
         }
         
         this.score = 0;
 
-        // Clear entity arrays
+        // Clear entity arrays (preserve clones if requested)
         this.coins = [];
         this.enemies = [];
         this.platforms = [];
-        this.frozenClones = [];
+        if (!preserveClones) {
+            this.frozenClones = [];
+        }
         this.anchors = []; // Clear anchors (they don't register with collision engine)
         
         // Don't clear the collision engine completely - keep player registered
@@ -239,15 +251,25 @@ export class GameModel {
      */
     nextLevel() {
         if (this.currentLevel < this.maxLevel) {
+            const fromLevel = this.currentLevel;
+            const toLevel = this.currentLevel + 1;
+            
+            // Check if clones should be preserved for this level transition
+            const preserveClones = this.levelDefinitions.shouldPreserveClones(fromLevel, toLevel);
+            
             this.currentLevel++;
             console.log(`Starting Level ${this.currentLevel}...`);
+            
+            if (preserveClones) {
+                console.log(`Preserving frozen clones from Level ${fromLevel} to Level ${toLevel}`);
+            }
             
             // Temporarily pause collision detection during level transition
             const wasRunning = this.isGameRunning;
             this.isGameRunning = false;
             
-            // Load the new level without setting up collision handlers again
-            this.loadCurrentLevel(false);
+            // Load the new level without setting up collision handlers again, optionally preserving clones
+            this.loadCurrentLevel(false, preserveClones);
             
             // Update total coins for the new level
             this.totalCoins = this.coins.length;
@@ -260,7 +282,8 @@ export class GameModel {
                 this.isGameRunning = wasRunning;
             }, 100); // 100ms pause
             
-            console.log(`Level ${this.currentLevel} loaded! Coins to collect: ${this.totalCoins}, Score: ${this.score}`);
+            const cloneInfo = preserveClones ? ` (${this.frozenClones.length} clones preserved)` : '';
+            console.log(`Level ${this.currentLevel} loaded! Coins to collect: ${this.totalCoins}, Score: ${this.score}${cloneInfo}`);
         }
     }
 
@@ -481,6 +504,33 @@ export class GameModel {
     }
 
     /**
+     * Remove the oldest frozen clone from the game
+     */
+    removeOldestFrozenClone() {
+        if (this.frozenClones.length > 0) {
+            const oldestClone = this.frozenClones[0]; // First clone in array is oldest
+            
+            // Play VFX animation before removing
+            oldestClone.vfxAlpha = 255;
+            oldestClone.setAnimationEnabled(true, 3); // Play animation once
+            
+            // Update animation callback to handle removal after animation
+            oldestClone.animationLoopCallback = () => {
+                oldestClone.vfxAlpha = 0;
+                oldestClone.setAnimationEnabled(false);
+                
+                // Remove the clone after animation completes
+                this.removeFrozenClone(oldestClone);
+                console.log(`Oldest frozen clone removed with VFX. Remaining clones: ${this.frozenClones.length}`);
+            };
+            
+            console.log(`Playing VFX animation for oldest clone removal...`);
+        } else {
+            console.log('No frozen clones to remove');
+        }
+    }
+
+    /**
      * Get the player object
      * @returns {Player} Player instance
      */
@@ -653,6 +703,14 @@ export class GameModel {
      */
     getPlaceCooldown() {
         return this.placeCooldown;
+    }
+
+    /**
+     * Get total placement cooldown time
+     * @returns {number} Total placement cooldown time in milliseconds
+     */
+    getPlaceCooldownTime() {
+        return this.placeCooldownTime;
     }
 
     /**

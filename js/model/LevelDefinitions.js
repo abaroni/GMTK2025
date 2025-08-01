@@ -47,6 +47,38 @@ export class LevelDefinitions {
     }
 
     /**
+     * Check if clones should be preserved when transitioning from one level to another
+     * @param {number} fromLevel - The level we're transitioning from
+     * @param {number} toLevel - The level we're transitioning to
+     * @returns {boolean} True if clones should be preserved
+     */
+    shouldPreserveClones(fromLevel, toLevel) {
+        // Define level pairs where clones should be preserved
+        const preservePairs = [
+            { from: 1, to: 2 }, // Preserve clones when going from level 1 to 2
+            // Add more pairs here as needed, for example:
+            // { from: 2, to: 3 }, // Preserve clones when going from level 2 to 3
+        ];
+        
+        return preservePairs.some(pair => pair.from === fromLevel && pair.to === toLevel);
+    }
+
+    /**
+     * Get level configuration metadata
+     * @param {number} levelNumber - Level number
+     * @returns {Object} Level configuration object
+     */
+    getLevelConfig(levelNumber) {
+        const configs = {
+            1: { name: "Tutorial", preserveClonesOnAdvance: true },
+            2: { name: "Advanced Tutorial", preserveClonesOnAdvance: false },
+            3: { name: "Challenge", preserveClonesOnAdvance: false }
+        };
+        
+        return configs[levelNumber] || { name: "Unknown", preserveClonesOnAdvance: false };
+    }
+
+    /**
      * Get level 1 definition
      * @returns {string} Level 1 string
      */
@@ -79,12 +111,37 @@ export class LevelDefinitions {
 ####################################
         `.trim();
     }
-
-    /**
-     * Get level 2 definition
-     * @returns {string} Level 2 string
-     */
     getLevel2() {
+        return `
+####################################
+####################################
+####################################
+####################################
+####################################
+####################################
+####################################
+##########................##########
+##########..C.............##########
+##########................##########
+##########................##########
+##########.......C........##########
+##########................##########
+##########................##########
+##########......####......##########
+##########......####......##########
+##########......####......##########
+##########......####....P.##########
+####################################
+####################################
+####################################
+####################################
+####################################
+####################################
+####################################
+        `.trim();
+    }
+
+    getLevel2_OLD() {
         return `
 ####################################
 ####################################

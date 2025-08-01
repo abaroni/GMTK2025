@@ -59,6 +59,12 @@ export class GameController {
             case 27: // Escape key
                 this.gameModel.togglePause();
                 break;
+            case 82: // R key
+                this.gameModel.resetLevel();
+                break;
+            case 81: // Q key
+                this.gameModel.removeOldestFrozenClone();
+                break;
         }
     }
 
