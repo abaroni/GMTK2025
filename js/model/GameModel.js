@@ -390,6 +390,87 @@ export class GameModel {
             return;
         }
 
+        if (entity.collisionType === 'one-way-down') {
+            // One-way platform that can only be collided with from below (jumping up into it)
+            
+            const prevPlayerTop = this.previousPlayerPosition.y + player.bounds.offsetY;
+            const currentPlayerTop = playerBox.y;
+            
+            // Check horizontal overlap
+            const horizontalOverlap = playerBox.x < platformBox.x + platformBox.width && 
+                                    playerBox.x + playerBox.width > platformBox.x;
+            
+            // Only trigger collision if:
+            // 1. Player has horizontal overlap with platform
+            // 2. Player was below platform in previous frame
+            // 3. Player's top edge has crossed or is now above platform bottom
+            // 4. Player is moving upward
+            if (horizontalOverlap && 
+                prevPlayerTop >= platformBox.y + platformBox.height && 
+                currentPlayerTop <= platformBox.y + platformBox.height && 
+                player.velocity.y < 0) {
+                
+                // Player hit platform from below - stop upward movement
+                player.y = platformBox.y + platformBox.height - player.bounds.offsetY;
+                player.velocity.y = 0;
+            }
+            return;
+        }
+
+        if (entity.collisionType === 'one-way-left') {
+            // One-way platform that can only be collided with from the left (moving right into it)
+            
+            const prevPlayerRight = this.previousPlayerPosition.x + player.bounds.offsetX + playerBox.width;
+            const currentPlayerRight = playerBox.x + playerBox.width;
+            
+            // Check vertical overlap
+            const verticalOverlap = playerBox.y < platformBox.y + platformBox.height && 
+                                  playerBox.y + playerBox.height > platformBox.y;
+            
+            // Only trigger collision if:
+            // 1. Player has vertical overlap with platform
+            // 2. Player was to the left of platform in previous frame
+            // 3. Player's right edge has crossed or is now past platform left
+            // 4. Player is moving rightward
+            if (verticalOverlap && 
+                prevPlayerRight <= platformBox.x && 
+                currentPlayerRight >= platformBox.x && 
+                player.velocity.x > 0) {
+                
+                // Player hit platform from left - stop rightward movement
+                player.x = platformBox.x - playerBox.width - player.bounds.offsetX;
+                player.velocity.x = 0;
+            }
+            return;
+        }
+
+        if (entity.collisionType === 'one-way-right') {
+            // One-way platform that can only be collided with from the right (moving left into it)
+            
+            const prevPlayerLeft = this.previousPlayerPosition.x + player.bounds.offsetX;
+            const currentPlayerLeft = playerBox.x;
+            
+            // Check vertical overlap
+            const verticalOverlap = playerBox.y < platformBox.y + platformBox.height && 
+                                  playerBox.y + playerBox.height > platformBox.y;
+            
+            // Only trigger collision if:
+            // 1. Player has vertical overlap with platform
+            // 2. Player was to the right of platform in previous frame
+            // 3. Player's left edge has crossed or is now past platform right
+            // 4. Player is moving leftward
+            if (verticalOverlap && 
+                prevPlayerLeft >= platformBox.x + platformBox.width && 
+                currentPlayerLeft <= platformBox.x + platformBox.width && 
+                player.velocity.x < 0) {
+                
+                // Player hit platform from right - stop leftward movement
+                player.x = platformBox.x + platformBox.width - player.bounds.offsetX;
+                player.velocity.x = 0;
+            }
+            return;
+        }
+
         if (overlapX < overlapY) {
             // Horizontal collision
             if (playerBox.x < platformBox.x) {

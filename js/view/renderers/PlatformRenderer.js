@@ -55,12 +55,21 @@ export class PlatformRenderer {
 
                 let tileType;
                 
-                // Check if this is a one-way-up platform
+                // Check collision type for one-way platforms
                 if (platform.collisionType === 'one-way-up') {
-                    // One-way-up platforms always use MIDDLE tile
+                    // One-way-up platforms use TOP_EDGE tile
                     tileType = 'TOP_EDGE';
+                } else if (platform.collisionType === 'one-way-down') {
+                    // One-way-down platforms use BOTTOM_EDGE tile
+                    tileType = 'BOTTOM_EDGE';
+                } else if (platform.collisionType === 'one-way-left') {
+                    // One-way-left platforms use LEFT_SIDE tile
+                    tileType = 'LEFT_SIDE';
+                } else if (platform.collisionType === 'one-way-right') {
+                    // One-way-right platforms use RIGHT_SIDE tile
+                    tileType = 'RIGHT_SIDE';
                 } else {
-                    // Regular platforms use adjacency-based tile selection
+                    // Regular solid platforms use adjacency-based tile selection
                     tileType = this.getTileType(worldX, worldY, allPlatforms);
                 }
                 

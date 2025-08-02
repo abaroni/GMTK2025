@@ -55,6 +55,27 @@ export class LevelParser {
                             collisionType: 'one-way-up'
                         });
                         break;
+                    case 'v':
+                        entities.platforms.push({ 
+                            x: worldX, y: worldY, 
+                            width: this.tileSize, height: this.tileSize,
+                            collisionType: 'one-way-down'
+                        });
+                        break;
+                    case '<':
+                        entities.platforms.push({ 
+                            x: worldX, y: worldY, 
+                            width: this.tileSize, height: this.tileSize,
+                            collisionType: 'one-way-left'
+                        });
+                        break;
+                    case '>':
+                        entities.platforms.push({ 
+                            x: worldX, y: worldY, 
+                            width: this.tileSize, height: this.tileSize,
+                            collisionType: 'one-way-right'
+                        });
+                        break;
                 }
             }
         });
@@ -104,7 +125,8 @@ export class LevelParser {
             while (
                 j < sorted.length &&
                 sorted[j].y === current.y &&
-                sorted[j].x === merged.x + merged.width
+                sorted[j].x === merged.x + merged.width &&
+                sorted[j].collisionType === current.collisionType // Only merge same collision types
             ) {
                 // Extend width
                 merged.width += sorted[j].width;
@@ -143,7 +165,8 @@ export class LevelParser {
                 vj < vSorted.length &&
                 vSorted[vj].x === current.x &&
                 vSorted[vj].width === current.width && // Must have same width
-                vSorted[vj].y === merged.y + merged.height
+                vSorted[vj].y === merged.y + merged.height &&
+                vSorted[vj].collisionType === current.collisionType // Only merge same collision types
             ) {
                 // Extend height
                 merged.height += vSorted[vj].height;
