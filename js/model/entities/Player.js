@@ -19,7 +19,9 @@ export class Player extends Entity {
         this.color = { r: 0, g: 255, b: 0 }; // Green color
         this.facingDirection = 'right'; 
         this.isRunning = false;
-        
+        this.midJump = true; // Whether player is currently mid-jump
+        this.onJump = null;
+
         // Override the default bounds with custom player bounds
         this.bounds = new Bounds(this.size - 24, this.size - 12, 12, 12); // Initialize bounds with player size
         this.physics = new Physics(2000, 400); // Initialize physics component
@@ -29,6 +31,7 @@ export class Player extends Entity {
         // Simplified jump properties
         this.jumpVelocity = -700; // Base jump strength (negative = upward)
         this.jumpKeyHeld = false; // Whether jump key is currently being held
+        this.pastFrameOnGround = true; // Whether player was on ground in the previous frame
         this.jumpGravity = 1500; // Gravity when jumping and key held (much lighter for high jumps)
         this.fallGravity = 3000; // Gravity when falling or key released (much heavier for quick tap)
         this.maxFallSpeed = 800; // Terminal velocity
@@ -38,7 +41,7 @@ export class Player extends Entity {
         this.gravityTransitionTimer = 0; // Current transition timer
         
         // Coyote time (grace period after leaving ground)
-        this.coyoteTime = 0.15; // 150ms grace period
+        this.coyoteTime = 0.75;
         this.coyoteTimer = 0;
         
         // Enable animation for player with 3 frames
@@ -56,7 +59,7 @@ export class Player extends Entity {
         this.activeDirections.add(direction);
         
         const accelerationAmount = this.acceleration * deltaTime;
-        
+
         switch (direction) {
             case 'up':
                 // Jump if on ground OR within coyote time
@@ -64,6 +67,10 @@ export class Player extends Entity {
                     this.velocity.y = this.jumpVelocity;
                     this.physics.onGround = false; // Player is now airborne
                     this.coyoteTimer = 0; // Use up coyote time
+                    if(!this.midJump) {
+                        this.onJump?.(); // Call jump callback if set
+                    }
+                    this.midJump = true; // Mark as mid-jump
                 }
                 this.jumpKeyHeld = true; // Mark jump key as being held
                 break;
@@ -101,24 +108,22 @@ export class Player extends Entity {
      * @param {number} canvasHeight - Canvas height for boundary checking
      * @param {number} deltaTime - Time elapsed since last frame in seconds
      */
-    update(deltaTime) {
-        // Store previous ground state for coyote time
-        const wasOnGround = this.physics.onGround;
-        
-        // Reset ground state at start of frame - collision system will set it back to true if still grounded
-        this.physics.onGround = false;
-        
+    update(deltaTime) {        
         // Update coyote timer
-        if (wasOnGround && !this.physics.onGround) {
+        if (this.pastFrameOnGround && !this.physics.onGround) {
             // Just left ground, start coyote timer
             this.coyoteTimer = this.coyoteTime;
-        } else if (!wasOnGround && !this.physics.onGround) {
+        } else if (!this.pastFrameOnGround && !this.physics.onGround) {
             // Still in air, decrease coyote timer
             this.coyoteTimer = Math.max(0, this.coyoteTimer - deltaTime);
         } else if (this.physics.onGround) {
-            // Back on ground, reset coyote timer
+            // Back on ground
             this.coyoteTimer = 0;
+            this.midJump = false; 
         }
+        this.pastFrameOnGround = this.physics.onGround; // Store current ground state for next frame
+        // Reset ground state at start of frame - collision system will set it back to true if still grounded
+        this.physics.onGround = false;
         
         // Handle horizontal movement and friction
         const hasLeft = this.activeDirections.has('left');
@@ -190,8 +195,8 @@ export class Player extends Entity {
         super.update(deltaTime);
         
         // Calculate intended position (don't round here - let collision system handle exact positions)
-        this.x = this.x + this.velocity.x * deltaTime;
-        this.y = this.y + this.velocity.y * deltaTime;
+        this.x = Math.round(this.x + this.velocity.x * deltaTime);
+        this.y = Math.round(this.y + this.velocity.y * deltaTime);
     }
 
     /**
@@ -286,6 +291,10 @@ export class Player extends Entity {
      */
     getColor() {
         return this.color;
+    }
+
+    setOnJump(callback) {
+        this.onJump = callback;
     }
 
     /**

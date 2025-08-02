@@ -44,9 +44,27 @@ export class GameModel {
         // Store previous player position for trajectory-based collision detection
         this.previousPlayerPosition = { x: 0, y: 0 };
         
+        // Sound effects
+        this.sounds = {
+            levelComplete: null,
+            coin: null,
+            jump: null
+        }
+        
+        // Level transition delays (in milliseconds)
+        this.levelCompleteDelay = 250; // Delay before advancing to next level
+        this.gameCompleteDelay = 2000; // Delay before restarting after all levels complete
+        
         // Place action cooldown
         this.placeCooldown = 0;
         this.placeCooldownTime = 1000; // 1 second in milliseconds
+        
+        // Frozen clone statistics tracking
+        this.stats = {
+            frozenClonesPlaced: 0,
+            frozenClonesDestroyed: 0,
+            loopRestarts: 0
+        };
     }
 
     /**
@@ -57,6 +75,10 @@ export class GameModel {
         this.loadCurrentLevel(true);
 
         this.totalCoins = this.coins.length; // Set total coins for level completion tracking
+
+        this.player.setOnJump(() => {
+            this.sounds.jump?.play();
+        });
     }
 
     /**
@@ -64,10 +86,10 @@ export class GameModel {
      * @param {boolean} setupHandlers - Whether to setup collision handlers (default: true)
      * @param {boolean} preserveClones - Whether to preserve existing frozen clones (default: false)
      */
-    loadCurrentLevel(setupHandlers = true) {
+    loadCurrentLevel(setupHandlers = true, forceClonePreservation = false) {
         const level = this.levelDefinitions.getLevel(this.currentLevel);
         // Check if clones should be preserved for this level transition
-        const preserveClones = level.preserveClonesFromPrevious;
+        const preserveClones = forceClonePreservation || level.preserveClonesFromPrevious;
 
         const levelString = level.levelString;
         if (!levelString) {
@@ -153,6 +175,7 @@ export class GameModel {
                         },
                     })
                     this.score += 1; // Increment score on collision with coin
+                    this.sounds.coin?.play();
                 }
                 if (entity instanceof Enemy) {
                     this.score -= 10; // Decrement score on collision with enemy
@@ -232,6 +255,11 @@ export class GameModel {
         if (this.coins.length === 0 && this.totalCoins > 0 && !this.isLevelCompleting) {
             this.isLevelCompleting = true; // Prevent multiple triggers
             
+            // Play level complete sound
+            if (this.sounds.levelComplete) {
+                this.sounds.levelComplete.play();
+            }
+            
             if (this.currentLevel < this.levelDefinitions.getMaxLevel()) {
                 // Progress to next level
                 console.log(`Level ${this.currentLevel} completed! Progressing to Level ${this.currentLevel + 1}...`);
@@ -239,15 +267,18 @@ export class GameModel {
                 // Add a delay before progressing to let the player see completion
                 setTimeout(() => {
                     this.nextLevel();
-                }, 1500); // 1.5 second delay
+                }, this.levelCompleteDelay); 
             } else {
                 // All levels completed - show completion message and restart from level 1
                 console.log('🎉 Congratulations! All levels completed! 🎉');
                 console.log('Restarting from Level 1...');
                 
+                // Log final statistics
+                this.logFinalStats();
+                
                 setTimeout(() => {
                     this.restartGame();
-                }, 2000); // 2 second delay to show completion
+                }, this.gameCompleteDelay); 
             }
         }
     }
@@ -321,12 +352,15 @@ export class GameModel {
     resetLevel() {
         console.log(`Resetting Level ${this.currentLevel}...`);
         
+        // Track loop restart
+        this.stats.loopRestarts++;
+        
         // Temporarily pause collision detection to prevent jiggling during reset
         const wasRunning = this.isGameRunning;
         this.isGameRunning = false;
         
         // Reload the current level without setting up collision handlers again
-        this.loadCurrentLevel(false);
+        this.loadCurrentLevel(false,true);
         
         // Update total coins for the reset level
         this.totalCoins = this.coins.length;
@@ -350,7 +384,10 @@ export class GameModel {
     handleStaticCollision(player, entity) {
         const playerBox = player.bounds.getCollisionBox(player);
         const platformBox = entity.bounds.getCollisionBox(entity);
-
+        
+        // Store original velocity for debugging
+        const originalVelocityX = player.velocity.x;
+        
         // Calculate overlap on each axis
         const overlapX = Math.min(playerBox.x + playerBox.width - platformBox.x, 
                                  platformBox.x + platformBox.width - playerBox.x);
@@ -507,6 +544,13 @@ export class GameModel {
 
             }
         }
+        
+        // After collision resolution, check if velocity changed unexpectedly
+        if (originalVelocityX !== 0 && player.velocity.x === 0) {
+            console.log(`Velocity reset! Original: ${originalVelocityX}, New: ${player.velocity.x}`);
+            console.log(`Platform type: ${entity.collisionType}, Player pos: (${player.x}, ${player.y})`);
+            console.log(`Platform pos: (${entity.x}, ${entity.y})`);
+        }
     }
 
     /**
@@ -524,8 +568,9 @@ export class GameModel {
         // Update cooldowns
         this.updateCooldowns(deltaTime);
         
-        // Update player physics
+        // Update player
         this.player.update(deltaTime);
+        
         
         // Update all coins for animation
         for (const coin of this.coins) {
@@ -606,6 +651,10 @@ export class GameModel {
         frozenClone.boundsEnabled = false; 
         this.frozenClones.push(frozenClone);
         this.collisionEngine.register(frozenClone);
+        
+        // Track clone placement
+        this.stats.frozenClonesPlaced++;
+        
         //register the frozen clone with the collision engine after 150ms
         setTimeout(() => {
             frozenClone.boundsEnabled = true; // Enable bounds after grace period
@@ -624,6 +673,9 @@ export class GameModel {
         
         // Remove from frozen clones array
         this.frozenClones = this.frozenClones.filter(c => c !== clone);
+        
+        // Track clone destruction
+        this.stats.frozenClonesDestroyed++;
         
         console.log(`Frozen clone destroyed. Remaining clones: ${this.frozenClones.length}`);
     }
@@ -867,6 +919,42 @@ export class GameModel {
      */
     togglePause() {
         this.isGameRunning = !this.isGameRunning;
+    }
+
+    setLevelCompleteSound(sound) {
+        this.sounds.levelComplete = sound;
+    }
+    setCoinSound(sound) {
+        this.sounds.coin = sound;
+    }
+    setJumpSound(sound) {
+        this.sounds.jump = sound;
+    }
+    playSound(soundName) {
+        if (this.sounds[soundName]) {
+            this.sounds[soundName].play();
+        } else {
+            console.warn(`Sound ${soundName} not found!`);
+        }
+    }
+
+    /**
+     * Get statistics for UI display
+     * @returns {Object} Statistics object with clone tracking data
+     */
+    getStats() {
+        return { ...this.stats };
+    }
+
+    /**
+     * Log final statistics when all levels completed
+     */
+    logFinalStats() {
+        console.log('=== GAME COMPLETION STATISTICS ===');
+        console.log(`Frozen Clones Placed: ${this.stats.frozenClonesPlaced}`);
+        console.log(`Frozen Clones Destroyed: ${this.stats.frozenClonesDestroyed}`);
+        console.log(`Loop Restarts: ${this.stats.loopRestarts}`);
+        console.log('=====================================');
     }
 
 }

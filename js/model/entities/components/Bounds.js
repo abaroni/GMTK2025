@@ -31,10 +31,11 @@ export class Bounds {
     static intersects(entityA, entityB) {
         const boxA = entityA.bounds.getCollisionBox(entityA);
         const boxB = entityB.bounds.getCollisionBox(entityB);
-
-        return !(boxA.x + boxA.width < boxB.x ||
-                 boxA.x > boxB.x + boxB.width ||
-                 boxA.y + boxA.height < boxB.y ||
-                 boxA.y > boxB.y + boxB.height);
+        
+        // Proper AABB intersection test
+        return !(boxA.x + boxA.width <= boxB.x ||
+                 boxB.x + boxB.width <= boxA.x ||
+                 boxA.y + boxA.height <= boxB.y ||
+                 boxB.y + boxB.height <= boxA.y);
     }
 }

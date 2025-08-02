@@ -70,7 +70,7 @@ export class PlatformRenderer {
                     tileType = 'RIGHT_SIDE';
                 } else {
                     // Regular solid platforms use adjacency-based tile selection
-                    tileType = this.getTileType(worldX, worldY, allPlatforms);
+                    tileType = this.getTileType(worldX, worldY, allPlatforms, platform.collisionType);
                 }
                 
                 const sprite = this.tileSprites[tileType];
@@ -93,20 +93,21 @@ export class PlatformRenderer {
      * @param {number} worldX - World X position of the tile
      * @param {number} worldY - World Y position of the tile
      * @param {Array} allPlatforms - Array of all platforms to check adjacency
+     * @param {string} collisionType - Collision type of the current platform
      * @returns {string} Tile type key
      */
-    getTileType(worldX, worldY, allPlatforms) {
-        // Check for adjacent tiles in 8 directions
-        const hasLeft = this.hasTileAt(worldX - this.tileSize, worldY, allPlatforms);
-        const hasRight = this.hasTileAt(worldX + this.tileSize, worldY, allPlatforms);
-        const hasTop = this.hasTileAt(worldX, worldY - this.tileSize, allPlatforms);
-        const hasBottom = this.hasTileAt(worldX, worldY + this.tileSize, allPlatforms);
+    getTileType(worldX, worldY, allPlatforms, collisionType) {
+        // Check for adjacent tiles in 8 directions (only same collision type)
+        const hasLeft = this.hasTileAt(worldX - this.tileSize, worldY, allPlatforms, collisionType);
+        const hasRight = this.hasTileAt(worldX + this.tileSize, worldY, allPlatforms, collisionType);
+        const hasTop = this.hasTileAt(worldX, worldY - this.tileSize, allPlatforms, collisionType);
+        const hasBottom = this.hasTileAt(worldX, worldY + this.tileSize, allPlatforms, collisionType);
         
         // Check diagonal neighbors for more complex tile selection
-        const hasTopLeft = this.hasTileAt(worldX - this.tileSize, worldY - this.tileSize, allPlatforms);
-        const hasTopRight = this.hasTileAt(worldX + this.tileSize, worldY - this.tileSize, allPlatforms);
-        const hasBottomLeft = this.hasTileAt(worldX - this.tileSize, worldY + this.tileSize, allPlatforms);
-        const hasBottomRight = this.hasTileAt(worldX + this.tileSize, worldY + this.tileSize, allPlatforms);
+        const hasTopLeft = this.hasTileAt(worldX - this.tileSize, worldY - this.tileSize, allPlatforms, collisionType);
+        const hasTopRight = this.hasTileAt(worldX + this.tileSize, worldY - this.tileSize, allPlatforms, collisionType);
+        const hasBottomLeft = this.hasTileAt(worldX - this.tileSize, worldY + this.tileSize, allPlatforms, collisionType);
+        const hasBottomRight = this.hasTileAt(worldX + this.tileSize, worldY + this.tileSize, allPlatforms, collisionType);
         
         // Determine tile type based on adjacent tiles
         
@@ -174,15 +175,17 @@ export class PlatformRenderer {
      * @param {number} worldX - World X coordinate to check
      * @param {number} worldY - World Y coordinate to check
      * @param {Array} allPlatforms - Array of all platforms
-     * @returns {boolean} True if there's a tile at this position
+     * @param {string} collisionType - Only consider platforms with this collision type
+     * @returns {boolean} True if there's a tile with matching collision type at this position
      */
-    hasTileAt(worldX, worldY, allPlatforms) {
+    hasTileAt(worldX, worldY, allPlatforms, collisionType) {
         for (const platform of allPlatforms) {
-            // Check if the point is within this platform's bounds
+            // Check if the point is within this platform's bounds AND has the same collision type
             if (worldX >= platform.x && 
                 worldX < platform.x + platform.width &&
                 worldY >= platform.y && 
-                worldY < platform.y + platform.height) {
+                worldY < platform.y + platform.height &&
+                platform.collisionType === collisionType) {
                 return true;
             }
         }

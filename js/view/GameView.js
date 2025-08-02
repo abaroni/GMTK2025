@@ -10,6 +10,9 @@ export class GameView {
         this.canvas = null;
         this.spriteSheet = null;
         this.newSpriteSheet = null; // Placeholder for new sprite sheet if needed
+        this.levelCompleteSound = null; 
+        this.coinSound = null; 
+        this.jumpSound = null;
         this.backgroundColor = "#000000"; // Default background color
         // Initialize camera with canvas dimensions
         const canvasDimensions = this.gameModel.getCanvasDimensions();
@@ -38,17 +41,34 @@ export class GameView {
         this.canvas.parent('game-container');
         
         //this.spriteSheet = loadImage('assets/ssheetT.png');
-        this.newSpriteSheet = loadImage('assets/BunSpriteSheet2.png'); 
-        
+        this.newSpriteSheet = loadImage('assets/BunSpriteSheet2.png');
+        // FROM https://freesound.org/people/Jofae/sounds/368651/
+        this.levelCompleteSound = loadSound('assets/368651__jofae__game-powerup.mp3');
+        this.levelCompleteSound.setVolume(0.75); 
+        // FROM https://freesound.org/people/Jofae/sounds/353624/
+        this.coinSound = loadSound('assets/353624__jofae__game-shot-light-gun.wav');
+        this.coinSound.setVolume(1.5); 
+        //FROM  https://freesound.org/people/Jofae/sounds/362328/
+        //362328__jofae__platform-jump
+        this.jumpSound = loadSound('assets/362328__jofae__platform-jump.mp3'); 
+        this.jumpSound.setVolume(0.25); 
+
         // Initialize platform renderer with tile sheet and matching tile size
         this.platformRenderer = new PlatformRenderer(this.newSpriteSheet, 50);
         
         // Initialize camera to follow the player
         this.camera.init(this.gameModel.getPlayer());
 
+        // Pass the level complete sound to the game model
+        this.gameModel.setLevelCompleteSound(this.levelCompleteSound);
+        this.gameModel.setCoinSound(this.coinSound);
+        this.gameModel.setJumpSound(this.jumpSound);
+
         console.log('GameView initialized');
     }
+    playSound(s){
 
+    }
     /**
      * Render the entire game frame
      */
@@ -513,6 +533,13 @@ export class GameView {
         }
         
         text(`Snowflakes: ${this.gameModel.getScore()} / ${this.gameModel.getTotalCoins() }`, offsetX, offsetY + 20);
+
+        // Draw frozen clone statistics
+        fill(color(255, 255, 255, 128)); // Reset to default white
+        const stats = this.gameModel.getStats();
+        text(`Clones Placed: ${stats.frozenClonesPlaced}`, offsetX, offsetY + 40);
+        text(`Clones Destroyed: ${stats.frozenClonesDestroyed}`, offsetX, offsetY + 55);
+        text(`Loop Restarts: ${stats.loopRestarts}`, offsetX, offsetY + 70);
 
         // Draw controls info
         fill(color(255, 255, 255,128)); // Set text color to white
