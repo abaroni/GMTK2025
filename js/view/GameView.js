@@ -539,6 +539,7 @@ export class GameView {
         const stats = this.gameModel.getStats();
         text(`Clones Placed: ${stats.frozenClonesPlaced}`, offsetX, offsetY+=20);
         text(`Clones Destroyed: ${stats.frozenClonesDestroyed}`, offsetX, offsetY+=20);
+        text(`Active Clones: ${this.gameModel.getFrozenClones().length}/${this.gameModel.getCloneLimit()}`, offsetX, offsetY+=20);
         text(`Loop Restarts: ${stats.loopRestarts}`, offsetX, offsetY+=20);
         text(`Loop Rewinds: ${stats.levelBackwards}`, offsetX, offsetY+=20);
 

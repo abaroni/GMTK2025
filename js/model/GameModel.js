@@ -697,6 +697,12 @@ export class GameModel {
             return false;
         }
 
+        // Check if clone limit is reached (limit equals number of coins collected)
+        if (this.frozenClones.length >= this.score) {
+            console.log(`Clone limit reached! Current clones: ${this.frozenClones.length}, Coins collected: ${this.score}`);
+            return false;
+        }
+
         // Get player position
         const playerPosition = this.player.getPosition();
         
@@ -953,6 +959,30 @@ export class GameModel {
      */
     getPlaceCooldownTime() {
         return this.placeCooldownTime;
+    }
+
+    /**
+     * Get current clone limit (equals number of coins collected)
+     * @returns {number} Maximum number of clones that can be placed
+     */
+    getCloneLimit() {
+        return this.score;
+    }
+
+    /**
+     * Get number of available clone slots
+     * @returns {number} Number of additional clones that can be placed
+     */
+    getAvailableCloneSlots() {
+        return Math.max(0, this.score - this.frozenClones.length);
+    }
+
+    /**
+     * Check if clone limit is reached
+     * @returns {boolean} True if no more clones can be placed
+     */
+    isCloneLimitReached() {
+        return this.frozenClones.length >= this.score;
     }
 
     /**
