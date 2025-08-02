@@ -40,7 +40,6 @@ export class GameModel {
         
         // Multi-level system
         this.currentLevel = 1;
-        this.maxLevel = this.levelDefinitions.getMaxLevel();
         
         // Place action cooldown
         this.placeCooldown = 0;
@@ -62,8 +61,12 @@ export class GameModel {
      * @param {boolean} setupHandlers - Whether to setup collision handlers (default: true)
      * @param {boolean} preserveClones - Whether to preserve existing frozen clones (default: false)
      */
-    loadCurrentLevel(setupHandlers = true, preserveClones = false) {
-        const levelString = this.levelDefinitions.getLevel(this.currentLevel);
+    loadCurrentLevel(setupHandlers = true) {
+        const level = this.levelDefinitions.getLevel(this.currentLevel);
+        // Check if clones should be preserved for this level transition
+        const preserveClones = level.preserveClonesFromPrevious;
+
+        const levelString = level.levelString;
         if (!levelString) {
             console.error(`Level ${this.currentLevel} not found!`);
             return;
@@ -226,7 +229,7 @@ export class GameModel {
         if (this.coins.length === 0 && this.totalCoins > 0 && !this.isLevelCompleting) {
             this.isLevelCompleting = true; // Prevent multiple triggers
             
-            if (this.currentLevel < this.maxLevel) {
+            if (this.currentLevel < this.levelDefinitions.getMaxLevel()) {
                 // Progress to next level
                 console.log(`Level ${this.currentLevel} completed! Progressing to Level ${this.currentLevel + 1}...`);
                 
@@ -250,26 +253,17 @@ export class GameModel {
      * Progress to the next level
      */
     nextLevel() {
-        if (this.currentLevel < this.maxLevel) {
-            const fromLevel = this.currentLevel;
-            const toLevel = this.currentLevel + 1;
-            
-            // Check if clones should be preserved for this level transition
-            const preserveClones = this.levelDefinitions.shouldPreserveClones(fromLevel, toLevel);
+        if (this.currentLevel < this.levelDefinitions.getMaxLevel()) {
             
             this.currentLevel++;
             console.log(`Starting Level ${this.currentLevel}...`);
-            
-            if (preserveClones) {
-                console.log(`Preserving frozen clones from Level ${fromLevel} to Level ${toLevel}`);
-            }
             
             // Temporarily pause collision detection during level transition
             const wasRunning = this.isGameRunning;
             this.isGameRunning = false;
             
             // Load the new level without setting up collision handlers again, optionally preserving clones
-            this.loadCurrentLevel(false, preserveClones);
+            this.loadCurrentLevel(false);
             
             // Update total coins for the new level
             this.totalCoins = this.coins.length;
@@ -281,9 +275,7 @@ export class GameModel {
             setTimeout(() => {
                 this.isGameRunning = wasRunning;
             }, 100); // 100ms pause
-            
-            const cloneInfo = preserveClones ? ` (${this.frozenClones.length} clones preserved)` : '';
-            console.log(`Level ${this.currentLevel} loaded! Coins to collect: ${this.totalCoins}, Score: ${this.score}${cloneInfo}`);
+;
         }
     }
 
@@ -726,7 +718,7 @@ export class GameModel {
      * @returns {number} Maximum level number
      */
     getMaxLevel() {
-        return this.maxLevel;
+        return this.levelDefinitions.getMaxLevel();
     }
 
     /**
