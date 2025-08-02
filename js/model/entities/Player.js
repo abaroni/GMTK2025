@@ -41,7 +41,7 @@ export class Player extends Entity {
         this.gravityTransitionTimer = 0; // Current transition timer
         
         // Coyote time (grace period after leaving ground)
-        this.coyoteTime = 0.75;
+        this.coyoteTime = 0.075;
         this.coyoteTimer = 0;
         
         // Enable animation for player with 3 frames

@@ -68,6 +68,9 @@ export class PlatformRenderer {
                 } else if (platform.collisionType === 'one-way-right') {
                     // One-way-right platforms use RIGHT_SIDE tile
                     tileType = 'RIGHT_SIDE';
+                } else if (platform.collisionType === 'numbered') {
+                    
+                    tileType = this.getTileType(worldX, worldY, allPlatforms, platform.collisionType);
                 } else {
                     // Regular solid platforms use adjacency-based tile selection
                     tileType = this.getTileType(worldX, worldY, allPlatforms, platform.collisionType);
@@ -84,6 +87,30 @@ export class PlatformRenderer {
                     this.tileSize,
                     sprite.x, sprite.y, 16, 16
                 );
+                
+                // Draw number on numbered platforms
+                if (platform.collisionType === 'numbered' && platform.requiredCoins !== null) {
+                    // Save current text settings
+                    push();
+                    
+                    // Set text properties
+                    fill(255, 255, 255); // White text
+                    stroke(0, 0, 0); // Black outline
+                    strokeWeight(2);
+                    textAlign(CENTER, CENTER);
+                    textSize(24);
+                    textFont('Arial');
+                    
+                    // Draw the number in the center of the tile
+                    text(
+                        platform.requiredCoins.toString(),
+                        worldX + this.tileSize / 2,
+                        worldY + this.tileSize / 2
+                    );
+                    
+                    // Restore previous settings
+                    pop();
+                }
             }
         }
     }

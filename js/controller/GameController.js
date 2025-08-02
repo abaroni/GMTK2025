@@ -65,6 +65,9 @@ export class GameController {
             case 81: // Q key
                 this.gameModel.removeOldestFrozenClone();
                 break;
+            case 69: // E key
+                this.gameModel.previousLevel();
+                break;
         }
     }
 

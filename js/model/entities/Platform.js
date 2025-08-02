@@ -1,11 +1,12 @@
 import { Entity } from "./Entity.js";
 
 export class Platform extends Entity {
-    constructor(x, y, width, height,collisionType) {
+    constructor(x, y, width, height, collisionType, requiredCoins = null) {
         // Call parent constructor
-        super(x, y, width, height,collisionType);
+        super(x, y, width, height, collisionType);
 
         // Platform-specific properties
+        this.requiredCoins = requiredCoins; // For numbered platforms
     }
 
     /**

@@ -76,6 +76,17 @@ export class LevelParser {
                             collisionType: 'one-way-right'
                         });
                         break;
+                    default:
+                        // Check if it's a numbered platform (1-9)
+                        if (/^[1-9]$/.test(char)) {
+                            entities.platforms.push({ 
+                                x: worldX, y: worldY, 
+                                width: this.tileSize, height: this.tileSize,
+                                collisionType: 'numbered',
+                                requiredCoins: parseInt(char)
+                            });
+                        }
+                        break;
                 }
             }
         });
@@ -126,7 +137,8 @@ export class LevelParser {
                 j < sorted.length &&
                 sorted[j].y === current.y &&
                 sorted[j].x === merged.x + merged.width &&
-                sorted[j].collisionType === current.collisionType // Only merge same collision types
+                sorted[j].collisionType === current.collisionType && // Only merge same collision types
+                current.collisionType !== 'numbered' // Never merge numbered platforms
             ) {
                 // Extend width
                 merged.width += sorted[j].width;
@@ -166,7 +178,8 @@ export class LevelParser {
                 vSorted[vj].x === current.x &&
                 vSorted[vj].width === current.width && // Must have same width
                 vSorted[vj].y === merged.y + merged.height &&
-                vSorted[vj].collisionType === current.collisionType // Only merge same collision types
+                vSorted[vj].collisionType === current.collisionType && // Only merge same collision types
+                current.collisionType !== 'numbered' // Never merge numbered platforms
             ) {
                 // Extend height
                 merged.height += vSorted[vj].height;

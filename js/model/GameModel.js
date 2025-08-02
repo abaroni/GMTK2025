@@ -63,7 +63,8 @@ export class GameModel {
         this.stats = {
             frozenClonesPlaced: 0,
             frozenClonesDestroyed: 0,
-            loopRestarts: 0
+            loopRestarts: 0,
+            levelBackwards: 0
         };
     }
 
@@ -123,7 +124,7 @@ export class GameModel {
         
         // Create platforms
         entities.platforms.forEach(p => {
-            this.platforms.push(new Platform(p.x, p.y, p.width, p.height, p.collisionType));
+            this.platforms.push(new Platform(p.x, p.y, p.width, p.height, p.collisionType, p.requiredCoins));
         });
 
         // Create coins
@@ -310,6 +311,40 @@ export class GameModel {
                 this.isGameRunning = wasRunning;
             }, 100); // 100ms pause
 ;
+        }
+    }
+
+    /**
+     * Go back to the previous level
+     */
+    previousLevel() {
+        if (this.currentLevel > 1) {
+            
+            this.currentLevel--;
+            console.log(`Going back to Level ${this.currentLevel}...`);
+            
+            // Track level backwards movement
+            this.stats.levelBackwards++;
+            
+            // Temporarily pause collision detection during level transition
+            const wasRunning = this.isGameRunning;
+            this.isGameRunning = false;
+            
+            // Load the previous level without setting up collision handlers again
+            this.loadCurrentLevel(false,true);
+            
+            // Update total coins for the new level
+            this.totalCoins = this.coins.length;
+            
+            // Reset completion flag
+            this.isLevelCompleting = false;
+            
+            // Resume game after a brief pause
+            setTimeout(() => {
+                this.isGameRunning = wasRunning;
+            }, 100); // 100ms pause
+        } else {
+            console.log('Already at first level, cannot go back further');
         }
     }
 
@@ -512,14 +547,14 @@ export class GameModel {
             // Horizontal collision
             if (playerBox.x < platformBox.x) {
                 // Player hit platform from the left
-                if (entity.collisionType == 'solid') {
+                if (entity.collisionType == 'solid' || entity.collisionType == 'numbered') {
                     player.x = platformBox.x - playerBox.width - player.bounds.offsetX;
                     player.velocity.x = 0; // Stop horizontal movement
                     
                 }
             } else {
                 // Player hit platform from the right
-                if (entity.collisionType == 'solid') {
+                if (entity.collisionType == 'solid' || entity.collisionType == 'numbered') {
                     player.x = platformBox.x + platformBox.width - player.bounds.offsetX;
                     player.velocity.x = 0; // Stop horizontal movement
                     
@@ -529,14 +564,14 @@ export class GameModel {
             // Vertical collision
             if (playerBox.y < platformBox.y) {
                 // Player hit platform from above (landing on top)
-                if (entity.collisionType == 'solid') {
+                if (entity.collisionType == 'solid' || entity.collisionType == 'numbered') {
                     player.y = platformBox.y - playerBox.height - player.bounds.offsetY;
                     player.physics.onGround = true; // Set grounded state using physics component
                     player.velocity.y = 0; // Stop vertical movement
                 }
             } else {
                 // Player hit platform from below (hitting ceiling)
-                if (entity.collisionType == 'solid') {
+                if (entity.collisionType == 'solid' || entity.collisionType == 'numbered') {
                     player.y = platformBox.y + platformBox.height - player.bounds.offsetY;
                     player.velocity.y = 0; // Stop vertical movement
                 }
@@ -587,6 +622,9 @@ export class GameModel {
             frozenClone.update(deltaTime);
         }
         
+        // Check and remove numbered platforms based on score
+        this.updateNumberedPlatforms();
+        
         // Check collisions
         this.collisionEngine.checkCollisions();
         
@@ -595,6 +633,33 @@ export class GameModel {
         
         // Check if level is completed (all coins collected)
         this.checkLevelCompletion();
+    }
+
+    /**
+     * Check and remove numbered platforms based on current score
+     */
+    updateNumberedPlatforms() {
+        const initialPlatformCount = this.platforms.length;
+        
+        // Remove platforms that should disappear based on score
+        this.platforms = this.platforms.filter(platform => {
+            if (platform.collisionType === 'numbered' && platform.requiredCoins !== null) {
+                const shouldRemove = this.score >= platform.requiredCoins;
+                if (shouldRemove) {
+                    // Unregister from collision engine
+                    this.collisionEngine.unregister(platform);
+                    console.log(`Removed numbered platform (${platform.requiredCoins}) - player has ${this.score} coins`);
+                }
+                return !shouldRemove;
+            }
+            return true; // Keep all non-numbered platforms
+        });
+        
+        // Log if any platforms were removed
+        const removedCount = initialPlatformCount - this.platforms.length;
+        if (removedCount > 0) {
+            console.log(`Removed ${removedCount} numbered platforms`);
+        }
     }
 
     /**
@@ -954,6 +1019,7 @@ export class GameModel {
         console.log(`Frozen Clones Placed: ${this.stats.frozenClonesPlaced}`);
         console.log(`Frozen Clones Destroyed: ${this.stats.frozenClonesDestroyed}`);
         console.log(`Loop Restarts: ${this.stats.loopRestarts}`);
+        console.log(`Level Backwards: ${this.stats.levelBackwards}`);
         console.log('=====================================');
     }
 

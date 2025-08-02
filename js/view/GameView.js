@@ -511,15 +511,12 @@ export class GameView {
         // Get camera offset for UI positioning
         const cameraOffset = this.camera.getOffset();
         const offsetX = 10 - cameraOffset.x;
-        const offsetY = 25 - cameraOffset.y;
-        
-        // Draw level info
-        text(`Loop: ${this.gameModel.getCurrentLevel()}/${this.gameModel.getMaxLevel()}`, offsetX, offsetY);
+        let offsetY = 25 - cameraOffset.y;
         
         // Draw score with cooldown color transition
         const placeCooldown = this.gameModel.getPlaceCooldown ? this.gameModel.getPlaceCooldown() : 0;
         const totalCooldownTime = this.gameModel.getPlaceCooldownTime ? this.gameModel.getPlaceCooldownTime() : 1000;
-        
+
         const defaultColor = color(255, 255, 255, 128);
         if (placeCooldown > 0) {
             // 0 = just started cooldown, 1 = cooldown finished
@@ -531,21 +528,24 @@ export class GameView {
             // Default white color when no cooldown
             fill(defaultColor);
         }
+
+        // Draw level info
+        text(`Loop: ${this.gameModel.getCurrentLevel()}/${this.gameModel.getMaxLevel()}`, offsetX, offsetY);
         
-        text(`Snowflakes: ${this.gameModel.getScore()} / ${this.gameModel.getTotalCoins() }`, offsetX, offsetY + 20);
+        
+        text(`Snowflakes: ${this.gameModel.getScore()} / ${this.gameModel.getTotalCoins() }`, offsetX, offsetY+=20);
 
         // Draw frozen clone statistics
-        fill(color(255, 255, 255, 128)); // Reset to default white
         const stats = this.gameModel.getStats();
-        text(`Clones Placed: ${stats.frozenClonesPlaced}`, offsetX, offsetY + 40);
-        text(`Clones Destroyed: ${stats.frozenClonesDestroyed}`, offsetX, offsetY + 55);
-        text(`Loop Restarts: ${stats.loopRestarts}`, offsetX, offsetY + 70);
+        text(`Clones Placed: ${stats.frozenClonesPlaced}`, offsetX, offsetY+=20);
+        text(`Clones Destroyed: ${stats.frozenClonesDestroyed}`, offsetX, offsetY+=20);
+        text(`Loop Restarts: ${stats.loopRestarts}`, offsetX, offsetY+=20);
+        text(`Loop Rewinds: ${stats.levelBackwards}`, offsetX, offsetY+=20);
 
         // Draw controls info
-        fill(color(255, 255, 255,128)); // Set text color to white
         textAlign(RIGHT);
         textSize(12);
-        text('Use arrow keys or WASD to move, space to place a frozen clone, Q to delete the older clone, R to restart the current loop', offsetX + width - 20, this.gameModel.canvasHeight - 10 - cameraOffset.y);
+        text('Use arrow keys or WASD to move, space to place a frozen clone, Q to delete the older clone, R to restart the current loop, E to go back one loop', offsetX + width - 20, this.gameModel.canvasHeight - 10 - cameraOffset.y);
         
         // Draw game status
         if (!this.gameModel.isRunning()) {
@@ -554,6 +554,8 @@ export class GameView {
             textSize(32);
             text('PAUSED', width / 2, height / 2);
         }
+        
+        fill(defaultColor);
 
     }
 
