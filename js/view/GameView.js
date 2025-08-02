@@ -52,7 +52,9 @@ export class GameView {
         //362328__jofae__platform-jump
         this.jumpSound = loadSound('assets/362328__jofae__platform-jump.mp3'); 
         this.jumpSound.setVolume(0.25); 
-
+        
+        //FROM https://vrtxrry.itch.io/dungeonfont/download/eyJleHBpcmVzIjoxNzU0MTUxNjQ1LCJpZCI6NzQxOTk3fQ%3d%3d%2evEOdC%2bEdlmF6YehP3Va61KZOf5s%3d
+        textFont(loadFont('assets/DungeonFont.ttf')); // Load custom font for text rendering
         // Initialize platform renderer with tile sheet and matching tile size
         this.platformRenderer = new PlatformRenderer(this.newSpriteSheet, 50);
         
@@ -506,7 +508,7 @@ export class GameView {
         fill(color(255, 255, 255,128)); // Set text color to white
         noStroke();
         textAlign(LEFT);
-        textSize(16);
+        textSize(26);
         
         // Get camera offset for UI positioning
         const cameraOffset = this.camera.getOffset();
@@ -545,8 +547,9 @@ export class GameView {
 
         // Draw controls info
         textAlign(RIGHT);
-        textSize(12);
-        text('Use arrow keys or WASD to move, space to place a frozen clone, Q to delete the older clone, R to restart the current loop, E to go back one loop', offsetX + width - 20, this.gameModel.canvasHeight - 10 - cameraOffset.y);
+        textSize(16);
+        text('Use arrow keys or WASD to move, space to place a frozen clone, ', offsetX + width - 20, this.gameModel.canvasHeight - 30 - cameraOffset.y);
+        text('Q to delete the older clone, R to restart the current loop, E to go back one loop', offsetX + width - 20, this.gameModel.canvasHeight - 10 - cameraOffset.y);
         
         // Draw game status
         if (!this.gameModel.isRunning()) {
