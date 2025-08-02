@@ -4,13 +4,6 @@
 export class LevelParser {
     constructor() {
         this.tileSize = 50;
-        this.tileMap = {
-            '.': 'empty',
-            '#': 'platform',
-            'C': 'coin',
-            'E': 'enemy',
-            'P': 'player'
-        };
     }
 
     /**
@@ -45,7 +38,8 @@ export class LevelParser {
                     case '#':
                         entities.platforms.push({ 
                             x: worldX, y: worldY, 
-                            width: this.tileSize, height: this.tileSize 
+                            width: this.tileSize, height: this.tileSize ,
+                            collisionType: 'solid'
                         });
                         break;
                     case 'C':
@@ -53,6 +47,13 @@ export class LevelParser {
                         break;
                     case 'E':
                         entities.enemies.push({ x: worldX, y: worldY });
+                        break;
+                    case '^':
+                        entities.platforms.push({ 
+                            x: worldX, y: worldY, 
+                            width: this.tileSize, height: this.tileSize,
+                            collisionType: 'one-way-up'
+                        });
                         break;
                 }
             }

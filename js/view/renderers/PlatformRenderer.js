@@ -53,9 +53,17 @@ export class PlatformRenderer {
                 const worldX = platform.x + tileX * this.tileSize;
                 const worldY = platform.y + tileY * this.tileSize;
 
+                let tileType;
                 
+                // Check if this is a one-way-up platform
+                if (platform.collisionType === 'one-way-up') {
+                    // One-way-up platforms always use MIDDLE tile
+                    tileType = 'TOP_EDGE';
+                } else {
+                    // Regular platforms use adjacency-based tile selection
+                    tileType = this.getTileType(worldX, worldY, allPlatforms);
+                }
                 
-                const tileType = this.getTileType(worldX, worldY, allPlatforms);
                 const sprite = this.tileSprites[tileType];
                 
                 // Draw the tile

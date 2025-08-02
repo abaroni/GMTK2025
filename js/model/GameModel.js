@@ -41,6 +41,9 @@ export class GameModel {
         // Multi-level system
         this.currentLevel = 1;
         
+        // Store previous player position for trajectory-based collision detection
+        this.previousPlayerPosition = { x: 0, y: 0 };
+        
         // Place action cooldown
         this.placeCooldown = 0;
         this.placeCooldownTime = 1000; // 1 second in milliseconds
@@ -98,7 +101,7 @@ export class GameModel {
         
         // Create platforms
         entities.platforms.forEach(p => {
-            this.platforms.push(new Platform(p.x, p.y, p.width, p.height));
+            this.platforms.push(new Platform(p.x, p.y, p.width, p.height, p.collisionType));
         });
 
         // Create coins
@@ -355,27 +358,73 @@ export class GameModel {
                                  platformBox.y + platformBox.height - playerBox.y);
         
         // Resolve collision on the axis with smallest overlap
+
+        // Handle one-way platforms specially
+        if (entity.collisionType === 'one-way-up') {
+            // Trajectory-based collision: Check if player crossed the platform top between frames
+            
+            // Use stored previous player position (actual position from last frame)
+            const prevPlayerBottom = this.previousPlayerPosition.y + player.bounds.offsetY + playerBox.height;
+            const currentPlayerBottom = playerBox.y + playerBox.height;
+            
+            // Check horizontal overlap to ensure player is actually above the platform
+            const horizontalOverlap = playerBox.x < platformBox.x + platformBox.width && 
+                                    playerBox.x + playerBox.width > platformBox.x;
+            
+            // Only trigger collision if:
+            // 1. Player has horizontal overlap with platform
+            // 2. Player was above platform in previous frame
+            // 3. Player's bottom edge has crossed or is now below platform top
+            // 4. Player is moving downward
+            if (horizontalOverlap && 
+                prevPlayerBottom <= platformBox.y && 
+                currentPlayerBottom >= platformBox.y && 
+                player.velocity.y > 0) {
+                
+                // Player crossed the platform top while falling - land on platform
+                player.y = platformBox.y - playerBox.height - player.bounds.offsetY;
+                player.physics.onGround = true;
+                player.velocity.y = 0;
+            }
+            // Ignore all other cases (moving up, jumping through, horizontal movement, etc.)
+            return;
+        }
+
         if (overlapX < overlapY) {
             // Horizontal collision
             if (playerBox.x < platformBox.x) {
                 // Player hit platform from the left
-                player.x = platformBox.x - playerBox.width - player.bounds.offsetX;
+                if (entity.collisionType == 'solid') {
+                    player.x = platformBox.x - playerBox.width - player.bounds.offsetX;
+                    player.velocity.x = 0; // Stop horizontal movement
+                    
+                }
             } else {
                 // Player hit platform from the right
-                player.x = platformBox.x + platformBox.width - player.bounds.offsetX;
+                if (entity.collisionType == 'solid') {
+                    player.x = platformBox.x + platformBox.width - player.bounds.offsetX;
+                    player.velocity.x = 0; // Stop horizontal movement
+                    
+                }
             }
-            player.velocity.x = 0; // Stop horizontal movement
         } else {
             // Vertical collision
             if (playerBox.y < platformBox.y) {
                 // Player hit platform from above (landing on top)
-                player.y = platformBox.y - playerBox.height - player.bounds.offsetY;
-                player.physics.onGround = true; // Set grounded state using physics component
+                if (entity.collisionType == 'solid') {
+                    player.y = platformBox.y - playerBox.height - player.bounds.offsetY;
+                    player.physics.onGround = true; // Set grounded state using physics component
+                    player.velocity.y = 0; // Stop vertical movement
+                }
             } else {
                 // Player hit platform from below (hitting ceiling)
-                player.y = platformBox.y + platformBox.height - player.bounds.offsetY;
+                if (entity.collisionType == 'solid') {
+                    player.y = platformBox.y + platformBox.height - player.bounds.offsetY;
+                    player.velocity.y = 0; // Stop vertical movement
+                }
+
+
             }
-            player.velocity.y = 0; // Stop vertical movement
         }
     }
 
@@ -385,6 +434,9 @@ export class GameModel {
      */
     update(deltaTime) {
         if (!this.isGameRunning) return;
+        
+        // Store current player position before updating (for next frame's collision detection)
+        this.previousPlayerPosition = { x: this.player.x, y: this.player.y };
         
         this.logPlayerIntersections();
 

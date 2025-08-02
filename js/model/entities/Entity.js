@@ -4,7 +4,7 @@ import { Bounds } from "./components/Bounds.js";
  * Base Entity class - provides unified interface for all game entities
  */
 export class Entity {
-    constructor(x, y, width, height) {
+    constructor(x, y, width, height, collisionType = 'solid') {
         this.x = x;
         this.y = y;
         this.width = width;
@@ -13,6 +13,7 @@ export class Entity {
         // Initialize bounds with entity dimensions
         this.bounds = new Bounds(width, height, 0, 0);
         this.boundsEnabled = true; // Enable bounds by default
+        this.collisionType = collisionType;
         
         // Animation properties
         this.animationFrame = 0; // Current animation frame (0-3)
@@ -223,4 +224,5 @@ export class Entity {
     isCustomAnimationPlaying() {
         return this.isPlayingCustomAnimation;
     }
+
 }
